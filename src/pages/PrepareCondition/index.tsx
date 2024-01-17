@@ -241,7 +241,8 @@ export const PrepareCondition = () => {
             activeAddress &&
             category
           ) {
-            const openingDateMoment = moment(resolutionDate + '')
+            //const openingDateMoment = moment(resolutionDate + '')
+            const openingDateMoment = moment().add(2, 'm')
             const questionOptions: QuestionOptions = {
               arbitrator: (arbitrator as Arbitrator).address,
               category,
@@ -353,7 +354,8 @@ export const PrepareCondition = () => {
           } = getValuesOmenCondition()
 
           if (resolutionDate && questionTitle && oracleOmen && category) {
-            const openingDateMoment = moment(resolutionDate + '')
+            //const openingDateMoment = moment(resolutionDate + '')
+            const openingDateMoment = moment().add(2, 'm')
             logger.log(`outcomes`, outcomes)
 
             const questionOptions: QuestionOptions = {
