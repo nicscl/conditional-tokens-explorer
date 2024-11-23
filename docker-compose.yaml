@@ -11,7 +11,12 @@ services:
       postgres_pass: letmein
       postgres_db: postgres
       ipfs: 'ipfs:5001'
-      ethereum: 'development:http://ganache:8545'
+      ethereum: 'xdai:https://rpc.gnosischain.com'
+      GRAPH_LOG: info
+      GRAPH_ALLOW_NON_DETERMINISTIC_IPFS: 'true'
+      POSTGRES_INITDB_ARGS: "--locale=C --encoding=UTF8"
+      LC_COLLATE: C
+      LC_CTYPE: C
     depends_on:
       - ipfs
       - postgres

@@ -1,4 +1,4 @@
-FROM node:12-alpine
+FROM node:16-alpine
 
 ENV PATH="./node_modules/.bin:${PATH}"
 
@@ -12,7 +12,8 @@ RUN apk --update add \
     make \
     g++ \
     libsecret-dev \
-    pkgconfig && \
+    pkgconfig \
+    libc6-compat && \
     rm -rf /var/cache/apk/*
 
 # Verify libsecret configuration
@@ -27,6 +28,7 @@ RUN chmod +x create_subgraph.sh
 # Clone and setup hg-subgraph
 RUN git clone https://github.com/nicscl/hg-subgraph.git && \
     cd hg-subgraph && \
+    npm install @realitio/realitio-contracts && \
     npm install && cd -
 
 ENTRYPOINT [ "./create_subgraph.sh" ]
