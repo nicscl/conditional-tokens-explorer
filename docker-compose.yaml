@@ -6,7 +6,7 @@ services:
       - '8000:8000'
       - '8020:8020'
     environment:
-      postgres_host: 'postgres:5432'
+      postgres_host: postgres
       postgres_user: postgres
       postgres_pass: letmein
       postgres_db: postgres
@@ -24,6 +24,12 @@ services:
     image: postgres
     environment:
       POSTGRES_PASSWORD: letmein
+      POSTGRES_USER: postgres
+      POSTGRES_DB: postgres
+      POSTGRES_INITDB_ARGS: "--locale=C --encoding=UTF8"
+      LC_COLLATE: C
+      LC_CTYPE: C
+    command: ["postgres", "-cshared_preload_libraries=pg_stat_statements"]
   ganache:
     image: trufflesuite/ganache-cli
     command: "-d -i 50"
