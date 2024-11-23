@@ -7,7 +7,7 @@
   },
   "homepage": "./",
   "dependencies": {
-    "1155-to-20-helper": "https://github.com/davidalbela/1155-to-20-helper",
+    "1155-to-20-helper": "https://github.com/xyzseer/1155-to-20-helper",
     "@apollo/react-hooks": "^3.1.5",
     "@apollo/react-testing": "^3.1.4",
     "@gnosis.pm/conditional-tokens-contracts": "^1.0.1",
