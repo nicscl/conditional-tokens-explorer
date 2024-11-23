@@ -20,10 +20,18 @@ RUN git clone https://github.com/realitio/realitio-contracts.git realitio && \
     npm install && cd ..
 
 # Clone and setup conditional-tokens-contracts
-RUN git clone https://github.com/gnosis/conditional-tokens-contracts.git && \
+RUN git config --global http.lowSpeedLimit 1000 && \
+    git config --global http.lowSpeedTime 2147483647 && \
+    git config --global http.postBuffer 2147483647 && \
+    git config --global core.compression 0 && \
+    git config --global http.timeout 2147483647 && \
+    git clone https://github.com/gnosis/conditional-tokens-contracts.git && \
     cd conditional-tokens-contracts && \
-    git checkout 7ad77eb4cba295b12de4d9f5977d641eeb2044ae && \
-    npm install && cd ..
+    # git checkout 7ad77eb4cba295b12de4d9f5977d641eeb2044ae && \
+    npm config set fetch-timeout 2147483647 && \
+    npm config set fetch-retries 5 && \
+    npm config set network-timeout 2147483647 && \
+    npm install --fetch-timeout=2147483647 && cd ..
 
 # Clone and setup realitio-gnosis-proxy
 RUN git clone https://github.com/fvictorio/realitio-gnosis-proxy && \
@@ -34,8 +42,8 @@ RUN git clone https://github.com/fvictorio/realitio-gnosis-proxy && \
 # Clone and setup 1155-to-20
 RUN git clone https://github.com/nicscl/1155-to-20 && \
     cd 1155-to-20 && \
-    git checkout 5989e00be9ba9bb135c6cb49a3674db2a9fb43b1 && \
-    yarn && cd ..
+    # git checkout 5989e00be9ba9bb135c6cb49a3674db2a9fb43b1 && \
+    yarn install --ignore-engines && cd ..
 
 # Make script executable
 RUN chmod +x prepare_db.sh
