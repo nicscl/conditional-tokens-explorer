@@ -1,4 +1,4 @@
-FROM node:16-alpine
+FROM node:18-alpine
 
 ENV PATH="./node_modules/.bin:${PATH}"
 
@@ -25,10 +25,11 @@ RUN npm install -g ganache-cli
 # Make the script executable
 RUN chmod +x create_subgraph.sh
 
-# Clone and setup hg-subgraph
+# Clone and setup hg-subgraph with all required dependencies
 RUN git clone https://github.com/nicscl/hg-subgraph.git && \
     cd hg-subgraph && \
-    npm install @realitio/realitio-contracts && \
-    npm install && cd -
+    npm install && \
+    npm install @realitio/realitio-contracts@2.1.2 && \
+    cd -
 
 ENTRYPOINT [ "./create_subgraph.sh" ]
