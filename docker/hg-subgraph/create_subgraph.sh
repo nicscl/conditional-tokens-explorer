@@ -10,8 +10,9 @@ ganache-cli -d -i 50 &
 PID=$!
 
 cd hg-subgraph/
-#sed -i 's/localhost/ganache/g' ops/render-subgraph-conf.js
-#sed -i 's/localhost/ganache/g' node_modules/@gnosis.pm/conditional-tokens-contracts/truffle.js
+sed -i 's/localhost/ganache/g' ops/render-subgraph-conf.js
+# sed -i 's/localhost/ganache/g' node_modules/@gnosis.pm/conditional-tokens-contracts/truffle-config.js
+sed -i 's/port: 8545/port: 7545/g' node_modules/@gnosis.pm/conditional-tokens-contracts/truffle-config.js
 
 waitport localhost 8545
 
@@ -66,25 +67,23 @@ fi
 
 echo "----------------------------------------"
 
-echo "Searching for files containing port 7545 in realitio directory:"
-find node_modules/@realitio -type f -exec grep -l "7545" {} \;
+echo "Searching for files containing port 8545 in realitio directory:"
+find node_modules/@realitio -type f -exec grep -l "8545" {} \;
 
-echo "Updating Truffle configuration to use port 8545"
-sed -i 's/7545/8545/g' truffle-config.js
-sed -i 's/7545/8545/g' node_modules/@realitio/realitio-contracts/truffle/truffle.js
+echo "Updating all Truffle configurations to use port 7545"
+find . -type f -name "truffle*.js" -exec sed -i 's/8545/7545/g' {} +
+find node_modules/@realitio -type f -name "truffle*.js" -exec sed -i 's/8545/7545/g' {} +
 
-# Add these lines to debug truffle.js configuration
-echo "Current truffle.js configuration:"
-cat node_modules/@realitio/realitio-contracts/truffle/truffle.js
 
-echo "Contents of truffle-config.js:"
-cat truffle-config.js
+# Add verification of port settings
+echo "Verifying truffle configuration ports:"
+echo "Main truffle-config.js:"
+grep -n "port:" truffle-config.js || echo "No port configuration found"
+echo "Realitio truffle.js:"
+grep -n "port:" node_modules/@realitio/realitio-contracts/truffle/truffle.js || echo "No p
 
-echo "Contents of realitio truffle.js:"
-cat node_modules/@realitio/realitio-contracts/truffle/truffle.js
 
-echo "Contents of realitio truffle-config.js (if exists):"
-cat node_modules/@realitio/realitio-contracts/truffle/truffle-config.js 2>/dev/null || echo "File does not exist"
+ort configuration found"
 
 npm run migrate
 echo "Run render subgraph"

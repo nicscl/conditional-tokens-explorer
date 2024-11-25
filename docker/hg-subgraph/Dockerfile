@@ -32,4 +32,5 @@ RUN git clone https://github.com/nicscl/hg-subgraph.git && \
     npm install @realitio/realitio-contracts@2.1.2 && \
     cd -
 
-ENTRYPOINT [ "./create_subgraph.sh" ]
+# CMD ["./create_subgraph.sh"]
+CMD ["bash"]
