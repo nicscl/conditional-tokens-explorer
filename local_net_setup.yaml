@@ -1,0 +1,8 @@
+for f in ./node_modules/realitio-gnosis-proxy/truffle-config.js ./node_modules/@realitio/realitio-contracts/truffle/truffle.js; do
+  sed -i 's/networks: {/networks: { local: { host: "ganache", port: 8545, network_id: 50 },/g' "$f"
+done
+for f in ./node_modules/truffle/build/initSource/truffle-config.js ./node_modules/@ensdomains/ens/truffle.js ./node_modules/@truffle/debugger/test/sources/init/truffle-config.js; do
+  if [ -f "$f" ]; then
+    sed -i 's/networks: {/networks: { local: { host: "ganache", port: 7545, network_id: 50 },/g' "$f"
+  fi
+done

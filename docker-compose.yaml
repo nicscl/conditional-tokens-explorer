@@ -39,7 +39,7 @@ services:
     image: trufflesuite/ganache-cli
     command: "-d -i 50"
     ports:
-      - '7545:8545'
+      - '8545:8545'
   hg-subgraph:
     build: ./docker/hg-subgraph/
     depends_on:
