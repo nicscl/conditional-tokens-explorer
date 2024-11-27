@@ -3,6 +3,7 @@ FROM node:18-alpine
 ENV PATH="./node_modules/.bin:${PATH}"
 
 COPY create_subgraph.sh ./
+COPY setup-migration.sh ./
 
 # Install system dependencies
 RUN apk --update add \
