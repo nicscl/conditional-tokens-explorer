@@ -1,0 +1,1290 @@
+    1  git status
+    2  ls
+    3  cd hg-subgraph
+    4  ls
+    5  cat package.json
+    6  ls
+    7  cat truffle-config.js 
+    8  npm run migrate
+    9  npm install solc@0.6.0
+   10  cat truffle-config.js 
+   11  nano truffle-config.js 
+   12  cat > truffle-config.js << 'EOL'
+module.exports = {
+  networks: {
+    local: {
+      host: 'ganache',
+      port: 8545,
+      network_id: 50,
+    },
+  },
+  compilers: {
+    solc: {
+      version: "^0.6.0",
+      settings: {
+        optimizer: {
+          enabled: true,
+          runs: 200
+        }
+      }
+    }
+  },
+  plugins: ['truffle-plugin-networks'],
+  // Support for multiple compiler versions
+  compilers: {
+    solc: {
+      version: "^0.5.0",  // Primary version
+      docker: false,
+      settings: {
+        optimizer: {
+          enabled: true,
+          runs: 200
+        }
+      }
+    }
+  }
+};
+EOL
+
+   13  # Copy config and create symlink
+   14  cp truffle-config.js node_modules/@gnosis.pm/conditional-tokens-contracts/truffle-config.js && cp truffle-config.js node_modules/1155-to-20/truffle-config.js && cp truffle-config.js node_modules/@realitio/realitio-contracts/truffle/truffle-config.js && ln -s node_modules/@realitio/realitio-contracts/truffle node_modules/@realitio/realitio-contracts
+   15  npm run migrate
+   16  cat > truffle-config.js <<'EOL'
+module.exports = {
+  networks: {
+    local: {
+      host: 'ganache',
+      port: 8545,
+      network_id: 50,
+    },
+  },
+  // Default compiler configuration
+  compilers: {
+    solc: {
+      version: '^0.5.0', // Default to Solidity 0.5.x
+      settings: {
+        optimizer: {
+          enabled: true,
+          runs: 200,
+        },
+      },
+    },
+  },
+  // Override compiler settings for specific contracts
+  overrides: {
+    // Contracts requiring Solidity 0.6.x
+    'contracts/Wrapped1155Factory.sol': {
+      version: '^0.6.0',
+      settings: {
+        optimizer: {
+          enabled: true,
+          runs: 200,
+        },
+      },
+    },
+    // Add additional overrides as needed
+  },
+  plugins: ['truffle-plugin-networks'],
+};
+EOL
+
+   17  # Copy config and create symlink
+   18  cp truffle-config.js node_modules/@gnosis.pm/conditional-tokens-contracts/truffle-config.js && cp truffle-config.js node_modules/1155-to-20/truffle-config.js && cp truffle-config.js node_modules/@realitio/realitio-contracts/truffle/truffle-config.js && ln -s node_modules/@realitio/realitio-contracts/truffle node_modules/@realitio/realitio-contracts
+   19  npm run migrate
+   20  npm run migrate
+   21  echo 'module.exports = { networks: { local: { host: "ganache", port: 8545, network_id: "50" } }, compilers: { solc: { version: "0.6.0", settings: { optimizer: { enabled: true, runs: 200 } } } } };' > truffle-config.js
+   22  # Copy config and create symlink
+   23  cp truffle-config.js node_modules/@gnosis.pm/conditional-tokens-contracts/truffle-config.js && cp truffle-config.js node_modules/1155-to-20/truffle-config.js && cp truffle-config.js node_modules/@realitio/realitio-contracts/truffle/truffle-config.js && ln -s node_modules/@realitio/realitio-contracts/truffle node_modules/@realitio/realitio-contracts
+   24  npm run migrate
+   25  echo 'module.exports = { networks: { local: { host: "ganache", port: 8545, network_id: "50" } }, compilers: { solc: { version: "0.6.2", settings: { optimizer: { enabled: true, runs: 200 } } } } };' > truffle-config.js
+   26  # Copy config and create symlink
+   27  cp truffle-config.js node_modules/@gnosis.pm/conditional-tokens-contracts/truffle-config.js && cp truffle-config.js node_modules/1155-to-20/truffle-config.js && cp truffle-config.js node_modules/@realitio/realitio-contracts/truffle/truffle-config.js && ln -s node_modules/@realitio/realitio-contracts/truffle node_modules/@realitio/realitio-contracts
+   28  npm run migrate
+   29  echo 'module.exports = { \
+         networks: { \
+           local: { \
+             host: "ganache", \
+             port: 8545, \
+             network_id: "50", \
+           }, \
+         }, \
+         compilers: { \
+           solc: { \
+             version: "0.6.2", \
+             settings: { \
+               optimizer: { enabled: true, runs: 200 }, \
+             }, \
+             overrides: { \
+               "Wrapped1155Factory.sol": { \
+                 version: "0.6.9", \
+                 settings: { \
+                   optimizer: { enabled: true, runs: 200 }, \
+                 }, \
+               }, \
+             }, \
+           }, \
+         }, \
+   30  echo 'module.exports = { networks: { local: { host: "ganache", port: 8545, network_id: "50" } }, compilers: { solc: { version: "0.6.9", settings: { optimizer: { enabled: true, runs: 200 } } } } };' > truffle-config.js
+   31  # Copy config and create symlink
+   32  cp truffle-config.js node_modules/@gnosis.pm/conditional-tokens-contracts/truffle-config.js && cp truffle-config.js node_modules/1155-to-20/truffle-config.js && cp truffle-config.js node_modules/@realitio/realitio-contracts/truffle/truffle-config.js && ln -s node_modules/@realitio/realitio-contracts/truffle node_modules/@realitio/realitio-contracts
+   33  npm run migrate
+   34  ls /hg-subgraph/node_modules/@realitio
+   35  ls /hg-subgraph/node_modules/@realitio/realitio-contracts
+   36  ls /hg-subgraph/node_modules/@realitio/realitio-contracts/truffle
+   37  cp node_modules/@realitio/realitio-contracts/package.json node_modules/@realitio/realitio-contracts/truffle/
+   38  npm run migrate
+   39  echo 'module.exports = { \
+      networks: { \
+        development: { \
+          host: "ganache", \
+          port: 8545, \
+          network_id: "50" \
+        } \
+      }, \
+      compilers: { \
+        solc: { \
+          version: "0.4.25", \
+          settings: { \
+            optimizer: { \
+              enabled: true, \
+              runs: 200 \
+            } \
+          } \
+        } \
+      } \
+    };' > node_modules/@realitio/realitio-contracts/truffle/truffle-config.js
+   40  npm run migrate
+   41  echo 'module.exports = { networks: { development: { host: "ganache", port: 8545, network_id: "50" } }, compilers: { solc: { version: "0.4.25", settings: { optimizer: { enabled: true, runs: 200 } } } } };' > node_modules/@realitio/realitio-contracts/truffle/truffle-config.js
+   42  npm run migrate
+   43  echo 'module.exports = { networks: { development: { host: "ganache", port: 8545, network_id: "50" } }, compilers: { solc: { version: "0.5.12", settings: { optimizer: { enabled: true, runs: 200 } } } } };' > node_modules/realitio-gnosis-proxy/truffle-config.js
+   44  npm run migrate
+   45  echo 'module.exports = { networks: { development: { host: "ganache", port: 8545, network_id: "50" } }, compilers: { solc: { version: "0.5.12", settings: { optimizer: { enabled: true, runs: 200 } } } } };' > node_modules/realitio-gnosis-proxy/truffle-config.js
+   46  echo "Debugging realitio-contracts installation:"
+   47  echo "----------------------------------------"
+   48  echo "1. Checking main package directory:"
+   49  ls -la node_modules/@realitio/realitio-contracts/
+   50  ls
+   51  npm run migrate
+   52  ls /hg-subgraph/node_modules/@realitio/realitio-contracts/truffle
+   53  cat /hg-subgraph/node_modules/@realitio/realitio-contracts/truffle/truffle-config.js
+   54  cat /hg-subgraph/node_modules/@realitio/realitio-contracts/truffle/truffle.js
+   55  cd /hg-subgraph/node_modules/@realitio/realitio-contracts/truffle
+   56  sh -c truffle migrate
+   57  cd ..
+   58  sh -c truffle migrate
+   59  npm truffle migrate
+   60  cat package.json 
+   61  npm migrate
+   62  npm run migrate
+   63  ls
+   64  cat config
+   65  ls config/
+   66  cat config/arbitrators.json 
+   67  cat truffle/package.json 
+   68  cd truffle/
+   69  npm run migrate
+   70  find . -type f -exec grep -l "7545" {} \; 2>/dev/null
+   71  cat ./build/contracts/RealitioERC20.json
+   72  find . -type f -exec grep -l ":7545" {} \; 2>/dev/null
+   73  find . -type f -exec grep -l ": 7545" {} \; 2>/dev/null
+   74  find . -type f -exec grep -l ": \"7545\"" {} \; 2>/dev/null
+   75  find . -type f -exec grep -l "port" {} \; 2>/dev/null
+   76  cat ./truffle.js
+   77  cat ./migrations/1_initial_migration.js
+   78  npm run migrate
+   79  cat ./truffle.js
+   80  cat ./truffle-config.js 
+   81  npm run migrate
+   82  npm run migrate -- --network local
+   83  cd ../..
+   84  cd ../..
+   85  cat package.json\
+   86  cat package.json
+   87  npm run migrate -- --network local
+   88  cat package.json
+   89  \cat pacakge.json
+   90  \cat package.json
+   91  \cat package.json
+   92  sed -i 's/"migrate": "truffle migrate"/"migrate": "truffle migrate --network=local"/g' package.json
+   93  \cat package.json
+   94  sed -i 's/truffle migrate &&/truffle migrate --network=local &&/g' package.json
+   95  ls
+   96  cat package.json
+   97  sed -i 's/truffle migrate &&truffle migrate &&/truffle migrate --network=local &&truffle migrate --network=local &&/g' package.json
+   98  cat package.json
+   99  cat package.json
+  100  ls
+  101  cat > package.json << 'EOL'
+{
+  "name": "hg-subgraph",
+  "private": true,
+  "version": "0.1.0",
+  "author": "Gnosis (https://gnosis.io)",
+  "description": "A subgraph for Gnosis Conditional Tokens",
+  "license": "LGPL-3.0",
+  "scripts": {
+    "build-truffle-artifacts": "truffle compile && truffle run load-networks",
+    "migrate": "npm explore @gnosis.pm/conditional-tokens-contracts -- truffle migrate --network=local --reset && npm explore 1155-to-20 -- truffle migrate --network=local --reset && npm explore @realitio/realitio-contracts/truffle -- truffle migrate --network=local && truffle migrate --network=local",
+    "create-local": "graph create --node http://localhost:8020 gnosis/conditional-tokens-gc",
+    "remove-local": "graph remove --node http://localhost:8020 gnosis/conditional-tokens-gc",
+    "deploy-local": "graph deploy --node http://localhost:8020 --ipfs http://localhost:5001 gnosis/conditional-tokens-gc",
+    "deploy:rinkeby": "graph deploy --node https://api.thegraph.com/deploy/ --ipfs https://api.thegraph.com/ipfs/ davidalbela/conditional-tokens-rinkeby",
+    "deploy:mainnet": "graph deploy --node https://api.thegraph.com/deploy/ --ipfs https://api.thegraph.com/ipfs/ davidalbela/conditional-tokens",
+    "deploy:sokol": "graph deploy --node https://api.thegraph.com/deploy/ --ipfs https://api.thegraph.com/ipfs/ davidalbela/conditional-tokens-sokol",
+    "deploy:xdai": "graph deploy --node https://api.thegraph.com/deploy/ --ipfs https://api.thegraph.com/ipfs/ gnosis/conditional-tokens-gc",
+    "refresh-abi": "node ops/abiGenerator.js",
+    "render-subgraph-config-local": "node ops/render-subgraph-conf.js",
+    "render-subgraph-config:rinkeby": "node ops/render-subgraph-conf.js rinkeby",
+    "render-subgraph-config:mainnet": "node ops/render-subgraph-conf.js mainnet",
+    "render-subgraph-config:sokol": "node ops/render-subgraph-conf.js sokol",
+    "render-subgraph-config:gnosis": "node ops/render-subgraph-conf.js gnosis",
+    "codegen": "npm run refresh-abi && npm run render-subgraph-config-local && graph codegen",
+    "codegen:rinkeby": "npm run build-truffle-artifacts && npm run refresh-abi && npm run render-subgraph-config:rinkeby && graph codegen",
+    "codegen:mainnet": "npm run build-truffle-artifacts && npm run refresh-abi && npm run render-subgraph-config:mainnet && graph codegen",
+    "codegen:sokol": "npm run build-truffle-artifacts && npm run refresh-abi && npm run render-subgraph-config:sokol && graph codegen",
+    "codegen:gnosis": "npm run build-truffle-artifacts && npm run refresh-abi && npm run render-subgraph-config:gnosis && graph codegen",
+    "build": "graph build",
+    "bootstrap-test": "wait-on http-get://localhost:8000 && npm run create-local",
+    "test-fresh-deploy": "wait-on tcp:8545 && npm run migrate && npm run test-fresh-graph",
+    "test-fresh-graph": "npm run codegen && wait-on tcp:5001 && npm run deploy-local && npm run test-existing-graph",
+    "test-existing-graph": "mocha --require mocha-steps --exit",
+    "test": "npm run bootstrap-test && npm run test-fresh-deploy",
+    "publish-graph:rinkeby": "npm run codegen:rinkeby && npm run deploy:rinkeby",
+    "publish-graph:mainnet": "npm run codegen:mainnet && npm run deploy:mainnet",
+    "publish-graph:sokol": "npm run codegen:sokol && npm run deploy:sokol",
+    "publish-graph:gnosis": "npm run codegen:gnosis && npm run deploy:gnosis"
+  },
+  "devDependencies": {
+    "1155-to-20": "https://github.com/nicscl/1155-to-20.git",
+    "@gnosis.pm/conditional-tokens-contracts": "^1.0.3",
+    "@graphprotocol/graph-cli": "^0.51.0",
+    "@graphprotocol/graph-ts": "^0.31.0",
+    "@openzeppelin/contracts": "^3.4.0",
+    "@realitio/realitio-contracts": "^2.2.8",
+    "@truffle/contract": "^4.3.6",
+    "@typescript-eslint/eslint-plugin": "^4.14.2",
+    "@typescript-eslint/parser": "^4.14.2",
+    "apollo-boost": "^0.4.9",
+    "chai": "^4.2.0",
+    "chai-as-promised": "^7.1.1",
+    "delay": "^5.0.0",
+    "eslint": "^7.19.0",
+    "eslint-config-prettier": "^7.2.0",
+    "eslint-plugin-prettier": "^3.3.1",
+    "fs-extra": "^9.1.0",
+    "husky": "^4.3.8",
+    "lint-staged": "^10.5.3",
+    "mocha": "^8.2.1",
+    "mocha-steps": "^1.3.0",
+    "mustache": "^4.1.0",
+    "node-fetch": "^2.6.1",
+    "openzeppelin-solidity": "^3.4.0",
+    "prettier": "^2.2.1",
+    "realitio-gnosis-proxy": "github:gnosis/realitio-gnosis-proxy",
+    "truffle": "^5.1.64",
+    "truffle-plugin-networks": "^0.1.0",
+    "wait-on": "^5.2.1",
+    "web3": "^1.3.4"
+  },
+  "overrides": {
+    "1155-to-20": {
+        "1155-to-20-helper": "npm:@github.com/xyzseer/1155-to-20-helper.git"
+    }
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "*.js": [
+      "eslint --fix",
+      "git add"
+    ]
+  }
+}
+EOL
+
+  102  ls
+  103  npm run migrate -- --network local
+  104  echo 'module.exports = { networks: { development: { host: "ganache", port: 8545, network_id: "50" } }, compilers: { solc: { version: "0.5.12", settings: { optimizer: { enabled: true, runs: 200 } } } } };' > node_modules/realitio-gnosis-proxy/truffle-config.js
+  105  npm run migrate -- --network local
+  106  cat node_modules/realitio-gnosis-proxy/truffle-config.js 
+  107  cat node_modules/realitio-gnosis-proxy/
+  108  ls node_modules/realitio-gnosis-proxy/
+  109  cat node_modules/realitio-gnosis-proxy/package.json 
+  110  ls
+  111  cat > node_modules/@realitio/realitio-contracts/truffle/truffle-config.js << 'EOL'
+module.exports = {
+  networks: {
+    development: {
+      host: 'ganache',
+      port: 8545,
+      network_id: '50',
+    },
+  },
+  compilers: {
+    solc: {
+      version: '0.6.9', // Default compiler version
+      settings: {
+        optimizer: {
+          enabled: true,
+          runs: 200,
+        },
+      },
+      overrides: {
+        // Use Solidity 0.5.12 for realitio-gnosis-proxy contracts
+        'node_modules/realitio-gnosis-proxy/contracts/**/*.sol': {
+          version: '0.5.12',
+          settings: {},
+        },
+        // Use Solidity 0.4.25 for @realitio/realitio-contracts
+        'node_modules/@realitio/realitio-contracts/**/*.sol': {
+          version: '0.4.25',
+          settings: {},
+        },
+      },
+    },
+  },
+};
+
+  112  cat > node_modules/@realitio/realitio-contracts/truffle/truffle-config.js << 'EOL'
+module.exports = {
+  networks: {
+    development: {
+      host: 'ganache',
+      port: 8545,
+      network_id: 50,
+    },
+  },
+  compilers: {
+    solc: {
+      version: '0.6.9', // Default compiler version
+      settings: {
+        optimizer: {
+          enabled: true,
+          runs: 200,
+        },
+      },
+      overrides: {
+        // Use Solidity 0.5.12 for realitio-gnosis-proxy contracts
+        'node_modules/realitio-gnosis-proxy/contracts/**/*.sol': {
+          version: '0.5.12',
+          settings: {},
+        },
+        // Use Solidity 0.4.25 for @realitio/realitio-contracts
+        'node_modules/@realitio/realitio-contracts/**/*.sol': {
+          version: '0.4.25',
+          settings: {},
+        },
+      },
+    },
+  },
+};
+EOL
+
+  113  npm run migrate -- --network local
+  114  cat > node_modules/@realitio/realitio-contracts/truffle/truffle-config.js << 'EOL'
+module.exports = {
+  networks: {
+    development: {
+      host: 'ganache',
+      port: 8545,
+      network_id: 50,
+    },
+  },
+  compilers: {
+    solc: {
+      version: '0.6.9', // Default compiler version
+      settings: {
+        optimizer: {
+          enabled: true,
+          runs: 200,
+        },
+      },
+      overrides: {
+        // Use Solidity 0.5.12 for realitio-gnosis-proxy contracts
+        'node_modules/realitio-gnosis-proxy/contracts/**/*.sol': {
+          version: '0.5.12',
+          settings: {},
+        },
+        // Use Solidity 0.4.25 for @realitio/realitio-contracts
+        'node_modules/@realitio/realitio-contracts/**/*.sol': {
+          version: '0.4.25',
+          settings: {},
+        },
+        // Use Solidity 0.4.25 for @realitio/realitio-contracts
+        'node_modules/@realitio/realitio-contracts/*.sol': {
+          version: '0.4.25',
+          settings: {},
+        },
+      },
+    },
+  },
+};
+EOL
+
+  115  npm run migrate -- --network local
+  116  cat > node_modules/@realitio/realitio-contracts/truffle/truffle-config.js << 'EOL'
+module.exports = {
+  networks: {
+    development: {
+      host: 'ganache',
+      port: 8545,
+      network_id: 50,
+    },
+  },
+  compilers: {
+    solc: {
+      version: 'pragma', // Default compiler version
+      settings: {
+        optimizer: {
+          enabled: true,
+          runs: 200,
+        },
+      },
+      overrides: {
+        // Use Solidity 0.5.12 for realitio-gnosis-proxy contracts
+        'node_modules/realitio-gnosis-proxy/contracts/**/*.sol': {
+          version: '0.5.12',
+          settings: {},
+        },
+        // Use Solidity 0.4.25 for @realitio/realitio-contracts
+        'node_modules/@realitio/realitio-contracts/**/*.sol': {
+          version: '0.4.25',
+          settings: {},
+        },
+        // Use Solidity 0.4.25 for @realitio/realitio-contracts
+        'node_modules/@realitio/realitio-contracts/*.sol': {
+          version: '0.4.25',
+          settings: {},
+        },
+      },
+    },
+  },
+};
+EOL
+
+  117  npm run migrate -- --network local
+  118  cat > node_modules/@realitio/realitio-contracts/truffle/truffle-config.js << 'EOL'
+module.exports = {
+  networks: {
+    development: {
+      host: 'ganache',
+      port: 8545,
+      network_id: 50,
+    },
+  },
+  compilers: {
+    solc: {
+      version: '0.5.12', // Default compiler version
+      settings: {
+        optimizer: {
+          enabled: true,
+          runs: 200,
+        },
+      },
+      overrides: {
+        // Use Solidity 0.5.12 for realitio-gnosis-proxy contracts
+        'node_modules/realitio-gnosis-proxy/contracts/**/*.sol': {
+          version: '0.5.12',
+          settings: {},
+        },
+        // Use Solidity 0.4.25 for @realitio/realitio-contracts
+        'node_modules/@realitio/realitio-contracts/**/*.sol': {
+          version: '0.4.25',
+          settings: {},
+        },
+        // Use Solidity 0.4.25 for @realitio/realitio-contracts
+        'node_modules/@realitio/realitio-contracts/*.sol': {
+          version: '0.4.25',
+          settings: {},
+        },
+      },
+    },
+  },
+};
+EOL
+
+  119  npm run migrate -- --network local
+  120  cat > node_modules/@realitio/realitio-contracts/truffle/truffle-config.js << 'EOL'
+module.exports = {
+  networks: {
+    development: {
+      host: 'ganache',
+      port: 8545,
+      network_id: 50,
+    },
+  },
+  compilers: {
+    solc: {
+      version: '0.4.18', // Default compiler version
+      settings: {
+        optimizer: {
+          enabled: true,
+          runs: 200,
+        },
+      },
+      overrides: {
+        // Use Solidity 0.5.12 for realitio-gnosis-proxy contracts
+        'node_modules/realitio-gnosis-proxy/contracts/**/*.sol': {
+          version: '0.5.12',
+          settings: {},
+        },
+        // Use Solidity 0.4.25 for @realitio/realitio-contracts
+        'node_modules/@realitio/realitio-contracts/**/*.sol': {
+          version: '0.4.25',
+          settings: {},
+        },
+        // Use Solidity 0.4.25 for @realitio/realitio-contracts
+        'node_modules/@realitio/realitio-contracts/*.sol': {
+          version: '0.4.25',
+          settings: {},
+        },
+      },
+    },
+  },
+};
+EOL
+
+  121  npm run migrate -- --network local
+  122  cat > node_modules/@realitio/realitio-contracts/truffle/truffle-config.js << 'EOL'
+module.exports = {
+  networks: {
+    development: {
+      host: 'ganache',
+      port: 8545,
+      network_id: 50,
+    },
+  },
+  compilers: {
+    solc: {
+      version: '0.4.25', // Default compiler version
+      settings: {
+        optimizer: {
+          enabled: true,
+          runs: 200,
+        },
+      },
+      overrides: {
+        // Use Solidity 0.5.12 for realitio-gnosis-proxy contracts
+        'node_modules/realitio-gnosis-proxy/contracts/**/*.sol': {
+          version: '0.5.12',
+          settings: {},
+        },
+        // Use Solidity 0.4.25 for @realitio/realitio-contracts
+        'node_modules/@realitio/realitio-contracts/**/*.sol': {
+          version: '0.4.25',
+          settings: {},
+        },
+        // Use Solidity 0.4.25 for @realitio/realitio-contracts
+        'node_modules/@realitio/realitio-contracts/*.sol': {
+          version: '0.4.25',
+          settings: {},
+        },
+      },
+    },
+  },
+};
+EOL
+
+  123  npm run migrate -- --network local
+  124  cat > node_modules/@realitio/realitio-contracts/truffle/truffle-config.js << 'EOL'
+module.exports = {
+  networks: {
+    development: {
+      host: 'ganache',
+      port: 8545,
+      network_id: 50,
+    },
+    local: {
+      host: 'ganache',
+      port: 8545,
+      network_id: 50,
+    },
+  },
+  compilers: {
+    solc: {
+      version: '0.4.25', // Default compiler version
+      settings: {
+        optimizer: {
+          enabled: true,
+          runs: 200,
+        },
+      },
+      overrides: {
+        // Use Solidity 0.5.12 for realitio-gnosis-proxy contracts
+        'node_modules/realitio-gnosis-proxy/contracts/**/*.sol': {
+          version: '0.5.12',
+          settings: {},
+        },
+        // Use Solidity 0.4.25 for @realitio/realitio-contracts
+        'node_modules/@realitio/realitio-contracts/**/*.sol': {
+          version: '0.4.25',
+          settings: {},
+        },
+        // Use Solidity 0.4.25 for @realitio/realitio-contracts
+        'node_modules/@realitio/realitio-contracts/*.sol': {
+          version: '0.4.25',
+          settings: {},
+        },
+      },
+    },
+  },
+};
+EOL
+
+  125  npm run migrate -- --network local
+  126  ls node_modules/@realitio
+  127  ls node_modules/realitio-gnosis-proxy
+  128  cat node_modules/realitio-gnosis-proxy/truffle-config.js 
+  129  ls
+  130  cat truffle-config.js
+  131  cat > truffle-config.js << 'EOL'
+module.exports = {
+  networks: {
+    development: {
+      host: 'ganache',
+      port: 8545,
+      network_id: 50,
+    },
+    local: {
+      host: 'ganache',
+      port: 8545,
+      network_id: 50,
+    },
+  },
+  compilers: {
+    solc: {
+      version: '0.4.25', // Default compiler version
+      settings: {
+        optimizer: {
+          enabled: true,
+          runs: 200,
+        },
+      },
+      overrides: {
+        // Use Solidity 0.5.12 for realitio-gnosis-proxy contracts
+        'node_modules/realitio-gnosis-proxy/contracts/**/*.sol': {
+          version: '0.5.12',
+          settings: {},
+        },
+        // Use Solidity 0.4.25 for @realitio/realitio-contracts
+        'node_modules/@realitio/realitio-contracts/**/*.sol': {
+          version: '0.4.25',
+          settings: {},
+        },
+        // Use Solidity 0.4.25 for @realitio/realitio-contracts
+        'node_modules/@realitio/realitio-contracts/*.sol': {
+          version: '0.4.25',
+          settings: {},
+        },
+      },
+    },
+  },
+};
+EOL
+
+  132  cat truffle-config.js
+  133  cat > truffle-config.js << 'EOL'
+module.exports = {
+  networks: {
+    development: {
+      host: 'ganache',
+      port: 8545,
+      network_id: 50,
+    },
+    local: {
+      host: 'ganache',
+      port: 8545,
+      network_id: 50,
+    },
+  },
+  compilers: {
+    solc: {
+      version: '0.5.12', // Default compiler version
+      settings: {
+        optimizer: {
+          enabled: true,
+          runs: 200,
+        },
+      },
+      overrides: {
+        // Use Solidity 0.5.12 for realitio-gnosis-proxy contracts
+        'node_modules/realitio-gnosis-proxy/contracts/**/*.sol': {
+          version: '0.5.12',
+          settings: {},
+        },
+        // Use Solidity 0.4.25 for @realitio/realitio-contracts
+        'node_modules/@realitio/realitio-contracts/**/*.sol': {
+          version: '0.4.25',
+          settings: {},
+        },
+        // Use Solidity 0.4.25 for @realitio/realitio-contracts
+        'node_modules/@realitio/realitio-contracts/*.sol': {
+          version: '0.4.25',
+          settings: {},
+        },
+      },
+    },
+  },
+};
+EOL
+
+  134  npm run migrate -- --network local
+  135  ls hg-subgraph/node_modules/truffle
+  136  ls node_modules/truffle
+  137  cat node_modules/truffle/webpack.config.js 
+  138  ls node_modules/truffle
+  139  ls truffle-config.js 
+  140  cat truffle-config.js 
+  141  find . -name "truffle*.js" -type f -exec sh -c '
+    if ! grep -q "local.*{" "$1"; then
+        echo "Missing local network in: $1"
+        echo "Content:"
+        cat "$1"
+        echo "----------------------------------------"
+    fi
+' sh {} \;
+  142  find . -name "truffle*.js" -type f -exec sh -c '
+    if ! grep -q "local.*{" "$1"; then
+        echo "$1"
+    fi
+' sh {} \;
+  143  cat ./node_modules/realitio-gnosis-proxy/truffle-config.js
+  144  cat ./node_modules/@realitio/realitio-contracts/truffle/truffle.js
+  145  for f in ./node_modules/realitio-gnosis-proxy/truffle-config.js ./node_modules/@realitio/realitio-contracts/truffle/truffle.js; do   sed -i 's/networks: {/networks: { local: { host: "ganache", port: 8545, network_id: 50 },/g' "$f"; done
+  146  npm run migrate -- --network local
+  147  find . -name "truffle*.js" -type f -exec sh -c '
+    if ! grep -q "local.*{" "$1"; then
+        echo "$1"
+    fi
+' sh {} \;
+  148  find . -name "truffle*.js" -type f -exec sh -c '
+    if ! grep -q "local.*{" "$1"; then
+        echo "$1"
+    fi
+' sh {} \;
+  149  for f in ./node_modules/truffle/build/initSource/truffle-config.js ./node_modules/@ensdomains/ens/truffle.js ./node_modules/@truffle/debugger/test/sources/init/truffle-config.js; do   if [ -f "$f" ]; then     sed -i 's/networks: {/networks: { local: { host: "ganache", port: 7545, network_id: 50 },/g' "$f";   fi; done
+  150  npm run migrate -- --network local
+  151  npm run migrate --network local
+  152  npm run migrate
+  153  npm run migrate --network local
+  154  npm run migrate
+  155  echo "Exporting bash history..."
+  156  # Force write current session to history file
+  157  history -a
+  158  # Start netcat listener on host machine first (run this command on your host):
+  159  # nc -l 9999 > bash_history.txt
+  160  # Then send the history
+  161  history | nc host.docker.internal 9999
+  162  echo "Bash history exported via network"
+  163  # Inside the container, run this to see your host's IP
+  164  ip route show | grep default | awk '{print $3}'
+  165  history -a && history | nc 172.29.0.1 9999
+  166  history -a && history | nc 172.29.0.1 9999
+  167  npm run refresh-abi && npm run render-subgraph-config-local
+  168  ping http://localhost:8545
+  169  ping http://ganache:8545
+  170  ping ganache:8545
+  171  npm run refresh-abi
+  172  npm run render-subgraph-config-local
+  173  cat ops/render-subgraph-conf.js
+  174  sed -i 's|http://localhost:8545|http://ganache:8545|g' ops/abiGenerator.js
+  175  npm run render-subgraph-config-local
+  176  cat ops/render-subgraph-conf.js
+  177  sed -i 's|http://localhost:8545|http://ganache:8545|g' ops/render-subgraph-conf.js 
+  178  npm run render-subgraph-config-local
+  179  sed -i -E "s/(address: '0x[a-zA-Z0-9]+')/address: '0xA57B8a5584442B467b4689F1144D269d096A3daF'/g" subgraph.yaml
+  180  echo "Apply codegen"
+  181  ./node_modules/.bin/graph codegen
+  182  waitport graph-node 8000
+  183  echo "Creating gnosis/hg at http://graph-node:8020"
+  184  ./node_modules/.bin/graph create --node http://graph-node:8020 gnosis/hg
+  185  echo "Deploying gnosis/hg at local"
+  186  ./node_modules/.bin/graph deploy --node http://graph-node:8020 --ipfs http://ipfs:5001 gnosis/hg
+  187  ls
+  188  cat src/conditions.ts 
+  189  cat src/conditions.ts | nc 172.29.0.1 9999
+  190  cat schema.graphql
+  191  cat schema.graphql | nc 172.29.0.1 9999
+  192  cat > src/conditions.ts << 'EOL'
+import { log, BigInt, BigDecimal } from '@graphprotocol/graph-ts';
+
+import {
+  ConditionPreparation,
+  ConditionResolution
+} from '../generated/ConditionalTokens/ConditionalTokens';
+
+import { Condition, Question, Category, ScalarQuestionLink } from '../generated/schema';
+
+import { requireGlobal, sum } from './utils';
+
+export function assignQuestionToCondition(condition: Condition, questionId: string): void {
+  condition.question = questionId;
+  let question = Question.load(questionId);
+  if (question == null) return;
+
+  if (question.category) {
+    let category = Category.load(question.category);
+    if (category) {
+      category.numConditions++;
+      category.numOpenConditions++;
+      category.save();
+    }
+  }
+
+  if (question.title) {
+    condition.title = question.title;
+  }
+
+  if (question.outcomes) {
+    condition.outcomes = question.outcomes;
+  }
+}
+
+export function handleConditionPreparation(event: ConditionPreparation): void {
+  let conditionId = event.params.conditionId.toHex()
+  let condition = new Condition(conditionId);
+  condition.conditionId = conditionId;
+
+  condition.oracle = event.params.oracle.toHex();
+  condition.questionId = event.params.questionId.toHex();
+  condition.outcomeSlotCount = event.params.outcomeSlotCount.toI32();
+
+  condition.creator = event.transaction.from.toHex();
+  condition.createTransaction = event.transaction.hash;
+  condition.createTimestamp = event.block.timestamp;
+  condition.createBlockNumber = event.block.number;
+
+  condition.resolved = false;
+
+  if (event.params.oracle.toHexString() == '0x464c94ea90fc7d0d08bb956cffb9acfe3aaa5313') {
+    assignQuestionToCondition(condition, event.params.questionId.toHexString());
+  } else if (event.params.oracle.toHexString() == '0xcf7f9472fab9372b34d96fbe1b57966b13951dbf') {
+    let linkId = event.params.questionId.toHexString();
+    let link = ScalarQuestionLink.load(linkId);
+    if (link != null) {
+      assignQuestionToCondition(condition, link.realityEthQuestionId.toHexString());
+      condition.scalarLow = link.scalarLow;
+      condition.scalarHigh = link.scalarHigh;
+    }
+  } else {
+    log.warning('Condition oracle address {} is not a known RealitioProxy address.', [condition.oracle]);
+    assignQuestionToCondition(condition, event.params.questionId.toHexString());
+  }
+
+  condition.save();
+
+  let global = requireGlobal();
+  global.numConditions += 1
+  global.save()
+}
+
+export function handleConditionResolution(event: ConditionResolution): void {
+  let payoutNumerators = event.params.payoutNumerators;
+
+  let condition = Condition.load(event.params.conditionId.toHex());
+
+  if (condition == null) {
+    log.error('condition {} could not be found', [
+      event.params.conditionId.toHex(),
+    ]);
+    return;
+  }
+
+  condition.payoutNumerators = payoutNumerators;
+  let denominator: BigInt = sum(payoutNumerators);
+  condition.payoutDenominator = denominator;
+  let denominatorBD: BigDecimal = denominator.toBigDecimal();
+  let payouts = new Array<BigDecimal>(payoutNumerators.length);
+  for (let i = 0; i < payouts.length; i++) {
+    payouts[i] = payoutNumerators[i].divDecimal(denominatorBD);
+  }
+  condition.payouts = payouts;
+
+  condition.resolved = true;
+  condition.resolveTransaction = event.transaction.hash;
+  condition.resolveTimestamp = event.block.timestamp;
+  condition.resolveBlockNumber = event.block.number;
+
+  condition.save();
+}
+
+EOL
+
+  193  cat schema.graphql
+  194  ./node_modules/.bin/graph deploy --node http://graph-node:8020 --ipfs http://ipfs:5001 gnosis/hg
+  195  ls
+  196  cat src/conditions.ts
+  197  ./node_modules/.bin/graph deploy --node http://graph-node:8020 --ipfs http://ipfs:5001 gnosis/hg
+  198  sed -i 's/Category.load(question.category)/Category.load(question.category as string)/' src/conditions.ts
+  199  ./node_modules/.bin/graph deploy --node http://graph-node:8020 --ipfs http://ipfs:5001 gnosis/hg
+  200  cat networks.json 
+  201  cat > networks.json << 'EOL'
+{
+  "local": {
+    "RealitioProxy": {
+      "address": "0x464c94ea90fc7d0d08bb956cffb9acfe3aaa5313"
+    },
+    "RealitioScalarAdapter": {
+      "address": "0xcf7f9472fab9372b34d96fbe1b57966b13951dbf"
+    }
+  },
+  "RealitioProxy": {
+    "1": {
+      "address": "0x0e414d014A77971f4EAA22AB58E6d84D16Ea838E",
+      "transactionHash": "0x8737379f9eb9e8e98aa77b74f46b40122770c96b7e87d85d37d18414166e5d49"
+    },
+    "4": {
+      "address": "0x17174dC1b62add32a1DE477A357e75b0dcDEed6E",
+      "transactionHash": "0x02a4080fc1c72e4aae4e970740012315a6cbc9509a8d0b1e683fa6b03c49a79a"
+    },
+    "77": {
+      "address": "0x9E6bd63aEbFb2E858B6111cea9C389f7664F7108",
+      "transactionHash": "0x22ec41cd5edc006a86235587a68a06b468c3f6fdb26616bcba3215242987051e"
+    },
+    "100": {
+      "address": "0xAB16D643bA051C11962DA645f74632d3130c81E2",
+      "transactionHash": "0x68f4745d14daa9b59f872b7f42b3ceeb5e352add42afab7360bb8f5b827f3525"
+    }
+  },
+  "RealitioScalarAdapter": {
+    "1": {
+      "address": "0xaa548EfBb0972e0c4b9551dcCfb6B787A1B90082",
+      "transactionHash": "0x781e582a3476bd59d35faa6c47164e5e51f0356a6756a7fcc5fbc7a79d4eed58"
+    },
+    "4": {
+      "address": "0x0e8Db8caD541C0Bf5b611636e81fEc0828bc7902",
+      "transactionHash": "0xbb128a058cd4a3ca7535da2a646ec813a2e9362e48a8b8d447e9f09007ef441b"
+    },
+    "77": {
+      "address": "0x1D369EEC97cF2E62c8DBB804b3998Bf15bcb67dB",
+      "transactionHash": "0xd0f043bc49efb9518b3b38e5cb7fd6f8bca59792f5f08943431366bd06995a54"
+    },
+    "100": {
+      "address": "0xcA75aaC320089c9fb077E86857fF6e954Df06a6B",
+      "transactionHash": "0x6bbf0b14b648ec4e941aa95574e42a2308d15ffc31aa489d1ef8a810d68b069a"
+    }
+  }
+}
+EOL
+
+  202  ./node_modules/.bin/graph deploy --node http://graph-node:8020 --ipfs http://ipfs:5001 gnosis/hg
+  203  top
+  204  sudo kill -9 4204
+  205  kill -9 4204
+  206  top
+  207  kill -9 4240
+  208  top
+  209  kill -9 4384
+  210  top
+  211  kill -9 4490
+  212  top
+  213  kill -9 4559
+  214  top
+  215  kill -9 4617
+  216  curl -X POST   -H "Content-Type: application/json"   http://graph-node:8020/status
+  217  getent hosts
+  218  getent hosts
+  219  getent hosts graph-node
+  220  getent hosts ipfs
+  221  getent hosts ganache
+  222  getent hosts ethereum
+  223  echo "172.29.0.2 ethereum" >> /etc/hosts
+  224  # Verify it works
+  225  getent hosts ethereum
+  226  top
+  227  kill -9 4685
+  228  top
+  229  kill -9 4739
+  230  # Change all network references from mainnet to xdai
+  231  sed -i 's/network: mainnet/network: xdai/g' subgraph.yaml
+  232  npm run deploy-local
+  233  curl -X POST     -H "Content-Type: application/json"     -d '{"query": "{indexingStatusForCurrentVersion(subgraphName: \"gnosis/conditional-tokens-gc\") { synced health error fatalError blockHeight chainHeadBlock { number } }}"}'     http://graph-node:8020/graphql
+  234  curl -X POST     -H "Content-Type: application/json"     -d '{"query": "{indexingStatusForCurrentVersion(subgraphName: \"gnosis/conditional-tokens-gc\") { synced health error fatalError blockHeight chainHeadBlock { number } }}"}'     http://graph-node:8020/graphql
+  235  # First, let's check if we can access the GraphQL playground
+  236  curl http://graph-node:8020/graphql
+  237  # Then, let's try a simpler query format
+  238  curl -X POST   -H "Content-Type: application/json"   -d '{"query": "{ subgraphs(first: 5) { id } }"}'   http://graph-node:8020/graphql
+  239  # Or try checking the subgraph status through the index node
+  240  curl -X POST   -H "Content-Type: application/json"   -d '{"query": "{ indexingStatuses { subgraph synced health error } }"}'   http://graph-node:8020/index-node/graphql
+  241  curl http://graph-node:8000/subgraphs/name/gnosis/conditional-tokens-gc
+  242  curl -X POST   -H "Content-Type: application/json"   -d '{"query": "{_meta{block{number}}}"}'   http://graph-node:8000/subgraphs/name/gnosis/conditional-tokens-gc
+  243  graph health
+  244  cp src/conditions.ts src/conditions.ts.bak
+  245  # Add logging for condition creation
+  246  sed -i '/ condition.save();/i \  log.info("Creating condition {} with oracle {} and questionId {}", [conditionId, event.params.oracle.toHex(), event.params.questionId.toHex()]);' src/conditions.ts
+  247  # Add logging for question loading
+  248  sed -i '/if (question == null) return;/i \  log.info("Loading question for questionId {}", [questionId]);\n  if (question == null) {\n    log.warning("Question not found for questionId {}", [questionId]);\n    return;\n  }' src/conditions.ts
+  249  graph build
+  250  cp conditions_write.ts.bak conditions_write.ts
+  251  cp src/conditions_write.ts.bak src/conditions_write.ts
+  252  ls src/conditions.ts.bak
+  253  cp conditions.ts.bak conditions.ts
+  254  cp src/conditions.ts.bak src/conditions.ts
+  255  sed -i '/let condition = new Condition(conditionId);/a \  log.info("Creating condition {} with oracle {} and questionId {}", [conditionId, event.params.oracle.toHex(), event.params.questionId.toHex()]);' src/conditions.ts
+  256  sed -i 's/if (question == null) return;/if (question == null) {\n    log.warning("Question not found for questionId {}", [questionId]);\n    return;\n  }/' src/conditions.ts
+  257  graph build
+  258  npm run render-subgraph-config:gnosis
+  259  $ grep -r "d743990732244555a1a0e82d5ab90c7f" .
+  260  grep -r "d743990732244555a1a0e82d5ab90c7f" .
+  261  grep -r "d743990732244555a1a0e82d5ab90c7f" . --exclude-dir={node_modules,.git,build,dist,generated}
+  262  find . -type f -not -path "*/node_modules/*" -not -path "*/.git/*" -not -path "*/build/*" -not -path "*/dist/*" -not -path "*/generated/*" -exec grep -l "d743990732244555a1a0e82d5ab90c7f" {} \;
+  263  cat ops/render-subgraph-conf.js
+  264  npm run render-subgraph-config:xdai
+  265  curl http://localhost:8030/graphql -H "Content-Type: application/json" -d '{"query": "{ indexingStatuses { subgraph synced health error } }"}'
+  266  sed -i 's/0x36bede640D19981A82090519bC1626249984c908/0xCeAfDD6bc0bEF976fdCd1112955828E00543c0Ce/g' subgraph.yaml
+  267  npm run create-local
+  268  npm run deploy-local
+  269  curl -X DELETE http://localhost:8020/admin/subgraphs/name/gnosis/hg
+  270  graph delete  --node http://localhost:8020 gnosis/hg
+  271  graph remove  --node http://localhost:8020 gnosis/hg
+  272  graph remove  --node http://graph:8020 gnosis/hg
+  273  graph remove  --node http://graph:8000 gnosis/hg
+  274  top
+  275  top
+  276  top
+  277  apk add htop
+  278  htop
+  279  top
+  280  graph remove gnosis/hg --node http://graph-node:8020
+  281  ./node_modules/.bin/graph create --node http://graph-node:8020 gnosis/hg
+  282  ./node_modules/.bin/graph deploy --node http://graph-node:8020 --ipfs http://ipfs:5001 gnosis/hg
+  283  cat subgraph.yaml | grep "address:"
+  284  sed -i -E "s/(address: '0x[a-zA-Z0-9]+')/address: '0xCeAfDD6bc0bEF976fdCd1112955828E00543c0Ce'/g" subgraph.yaml
+  285  cat subgraph.yaml | grep "address:"
+  286  graph remove gnosis/hg --node http://graph-node:8020
+  287  ./node_modules/.bin/graph create --node http://graph-node:8020 gnosis/hg
+  288  ./node_modules/.bin/graph deploy --node http://graph-node:8020 --ipfs http://ipfs:5001 gnosis/hg
+  289  cat subgraph.yaml | grep "address:"
+  290  # Replace placeholder address with actual address
+  291  sed -i 's/"YOUR_CONTRACT_ADDRESS"/"0xCeAfDD6bc0bEF976fdCd1112955828E00543c0Ce"/' subgraph.yaml
+  292  # Remove the comment about startBlock
+  293  sed -i 's/# Set this to a block before your first relevant event//' subgraph.yaml
+  294  # Replace the "Add other event handlers" comment with actual handlers
+  295  sed -i '/# Add other event handlers/c\        - event: ConditionResolution(indexed bytes32,indexed address,indexed bytes32,uint256[])\n          handler: handleConditionResolution\n        - event: PositionSplit(indexed address,address,indexed bytes32,indexed bytes32,uint256[],uint256)\n          handler: handlePositionSplit\n        - event: PositionsMerge(indexed address,address,indexed bytes32,indexed bytes32,uint256[],uint256)\n          handler: handlePositionsMerge\n        - event: PayoutRedemption(indexed address,indexed address,indexed bytes32,bytes32,uint256[],uint256)\n          handler: handlePayoutRedemption\n        - event: TransferSingle(indexed address,indexed address,indexed address,uint256,uint256)\n          handler: handleTransferSingle\n        - event: TransferBatch(indexed address,indexed address,indexed address,uint256[],uint256[])\n          handler: handleTransferBatch' subgraph.yaml
+  296  # Create the file if it doesn't exist
+  297  mkdir -p src/positions
+  298  cat > src/positions/index.ts << 'EOL'
+import { PositionSplit } from '../../generated/ConditionalTokens/ConditionalTokens'
+import { ConditionalTokens } from '../../generated/ConditionalTokens/ConditionalTokens'
+import { log } from '@graphprotocol/graph-ts'
+
+export function handlePositionSplit(event: PositionSplit): void {
+  let contract = ConditionalTokens.bind(event.address)
+  let collectionIdResult = contract.try_getCollectionId(event.params.parentCollectionId, event.params.conditionId, event.params.partition)
+  
+  if (collectionIdResult.reverted) {
+    log.warning('getCollectionId reverted for condition {} and partition {}', [
+      event.params.conditionId.toHexString(),
+      event.params.partition.toString()
+    ])
+    return
+  }
+
+  let collectionId = collectionIdResult.value
+  // Continue with position split handling...
+}
+EOL
+
+  299  ls
+  300  ls src/
+  301  sed -i '
+/^import/i\import { log } from "@graphprotocol/graph-ts"\nimport {\n  PositionSplit,\n  ConditionalTokens\n} from "../../generated/ConditionalTokens/ConditionalTokens"\nimport { Position, Collection } from "../../generated/schema"
+/let collectionIdResult/c\  let collectionIdResult = contract.try_getCollectionId(\n    event.params.parentCollectionId,\n    event.params.conditionId,\n    event.params.partition\n  )
+/if (collection == null)/c\  if (collection == null) {\n    collection = new Collection(collectionId.toHexString())\n    collection.conditionIds = []\n    collection.conditions = []\n    collection.indexSets = []\n    collection.multiplicities = []\n    collection.conditionIdsStr = ""\n    collection.save()\n  }
+' src/positions/index.ts
+  302  cat src/positions/index.ts 
+  303  sed -i '
+1i\import { log } from "@graphprotocol/graph-ts"\
+import {\
+  PositionSplit,\
+  ConditionalTokens\
+} from "../../generated/ConditionalTokens/ConditionalTokens"\
+import { Position, Collection } from "../../generated/schema"\
+\
+export function handlePositionSplit(event: PositionSplit): void {\
+  let contract = ConditionalTokens.bind(event.address)\
+  let collectionIdResult = contract.try_getCollectionId(\
+    event.params.parentCollectionId,\
+    event.params.conditionId,\
+    event.params.partition\
+  )\
+\
+  if (collectionIdResult.reverted) {\
+    log.warning("getCollectionId reverted for condition {} and partition {}", [\
+      event.params.conditionId.toHexString(),\
+      event.params.partition.toString()\
+    ])\
+    return\
+  }\
+\
+  let collectionId = collectionIdResult.value\
+  let collection = Collection.load(collectionId.toHexString())\
+  if (collection == null) {\
+    collection = new Collection(collectionId.toHexString())\
+    collection.conditionIds = []\
+    collection.conditions = []\
+    collection.indexSets = []\
+    collection.multiplicities = []\
+    collection.conditionIdsStr = ""\
+    collection.save()\
+  }\
+\
+  let positionId = collectionId.toHexString() + "-" + event.params.collateralToken.toHexString()\
+  let position = Position.load(positionId)\
+  if (position == null) {\
+    position = new Position(positionId)\
+    position.collection = collection.id\
+    position.collateralToken = event.params.collateralToken\
+    position.activeValue = event.params.amount\
+    position.save()\
+  }' src/positions/index.ts
+  304  graph remove gnosis/hg --node http://graph-node:8020
+  305  ./node_modules/.bin/graph create --node http://graph-node:8020 gnosis/hg
+  306  ./node_modules/.bin/graph deploy --node http://graph-node:8020 --ipfs http://ipfs:5001 gnosis/hg
+  307  sed -i '1i\import { log, BigInt } from "@graphprotocol/graph-ts"\
+import { ConditionalTokens } from "../../generated/ConditionalTokens/ConditionalTokens"\
+import { Collection } from "../../generated/schema"\
+\
+export function operateOnSubtree(\
+  contract: ConditionalTokens,\
+  parentCollectionId: BigInt,\
+  conditionId: BigInt,\
+  partition: BigInt[],\
+  amount: BigInt\
+): void {\
+  let collectionIdResult = contract.try_getCollectionId(\
+    parentCollectionId,\
+    conditionId,\
+    partition\
+  )\
+\
+  if (collectionIdResult.reverted) {\
+    log.warning(\
+      "operateOnSubtree: getCollectionId reverted for parentCollection {}, condition {}, partition {}",\
+      [\
+        parentCollectionId.toHexString(),\
+        conditionId.toHexString(),\
+        partition.toString()\
+      ]\
+    )\
+    return\
+  }\
+\
+  let collectionId = collectionIdResult.value\
+  let collection = Collection.load(collectionId.toHexString())\
+  \
+  if (collection == null) {\
+    collection = new Collection(collectionId.toHexString())\
+    collection.conditionIds = []\
+    collection.conditions = []\
+    collection.indexSets = []\
+    collection.multiplicities = []\
+    collection.conditionIdsStr = ""\
+    collection.save()\
+  }\
+\
+  for (let i = 0; i < partition.length; i++) {\
+    let subCollectionIdResult = contract.try_getCollectionId(\
+      collectionId,\
+      conditionId,\
+      [partition[i]]\
+    )\
+\
+    if (subCollectionIdResult.reverted) {\
+      log.warning(\
+        "operateOnSubtree: subcollection getCollectionId reverted for collection {}, partition {}",\
+        [collectionId.toHexString(), partition[i].toString()]\
+      )\
+      continue\
+    }\
+  }\
+}' src/positions/operateOnSubtree.ts
+  308  cp src/positions.ts src/positions.ts.backup
+  309  sed -i '
+/jointCollectionId = conditionalTokens.getCollectionId/c\    jointCollectionId = conditionalTokens.try_getCollectionId(\n      parentCollectionId,\n      conditionId,\n      unionIndexSet\n    ).value;
+/let collectionId = conditionalTokens.getCollectionId/c\    let collectionIdResult = conditionalTokens.try_getCollectionId(\n      parentCollectionId,\n      conditionId,\n      indexSet,\n    );\n    if (collectionIdResult.reverted) {\n      log.warning("getCollectionId reverted for condition {} and partition {}", [\n        conditionId.toHexString(),\n        indexSet.toString()\n      ]);\n      return;\n    }\n    let collectionId = collectionIdResult.value;
+' src/positions.ts
+  310  graph remove gnosis/hg --node http://graph-node:8020
+  311  ./node_modules/.bin/graph create --node http://graph-node:8020 gnosis/hg
+  312  ./node_modules/.bin/graph deploy --node http://graph-node:8020 --ipfs http://ipfs:5001 gnosis/hg
+  313  # Apply changes
+  314  sed -i '
+/jointCollectionId = conditionalTokens.getCollectionId/c\    jointCollectionId = conditionalTokens.try_getCollectionId(\
+      parentCollectionId,\
+      conditionId,\
+      unionIndexSet\
+    ).value;
+/let collectionId = conditionalTokens.getCollectionId/c\    let collectionIdResult = conditionalTokens.try_getCollectionId(\
+      parentCollectionId,\
+      conditionId,\
+      indexSet\
+    );\
+    if (collectionIdResult.reverted) {\
+      log.warning("getCollectionId reverted for condition {} and partition {}", [\
+        conditionId.toHexString(),\
+        indexSet.toString()\
+      ]);\
+      return;\
+    }\
+    let collectionId = collectionIdResult.value;
+' src/positions.ts
+  315  ./node_modules/.bin/graph deploy --node http://graph-node:8020 --ipfs http://ipfs:5001 gnosis/hg
+  316  cp src/positions.ts.backup src/positions.ts
+  317  # Apply changes
+  318  sed -i '
+/jointCollectionId = conditionalTokens.getCollectionId/c\    jointCollectionId = conditionalTokens.try_getCollectionId(\
+      parentCollectionId,\
+      conditionId,\
+      unionIndexSet\
+    ).value;
+/let collectionId = conditionalTokens.getCollectionId/c\    let collectionIdResult = conditionalTokens.try_getCollectionId(\
+      parentCollectionId,\
+      conditionId,\
+      indexSet\
+    );\
+    if (collectionIdResult.reverted) {\
+      log.warning("getCollectionId reverted for condition {} and partition {}", [\
+        conditionId.toHexString(),\
+        indexSet.toString()\
+      ]);\
+      return;\
+    }\
+    let collectionId = collectionIdResult.value;
+' src/positions.ts
+  319  ./node_modules/.bin/graph deploy --node http://graph-node:8020 --ipfs http://ipfs:5001 gnosis/hg
+  320  vim src/positions.ts
+  321  apk add nano
+  322  nano src/positions.ts
+  323  nano ~/.nanorc
+  324  nano src/positions.ts
+  325  cp src/positions.ts.backup src/positions.ts
+  326  nano src/positions.ts
+  327  apk update
+  328  apk add libstdc++ curl tar
+  329  apk add --no-cache curl tar
+  330  curl -L -o vscode-server.tar.gz https://update.code.visualstudio.com/commit:48d735e3dec42accfdf71efabf00bb49e242b880/server-linux-alpine/stable
+  331  ls -lh vscode-server.tar.gz
+  332  tar -xzf vscode-server.tar.gz -C /root/.vscode-server/bin/48d735e3dec42accfdf71efabf00bb49e242b880
+  333  mkdir -p /root/.vscode-server/bin/48d735e3dec42accfdf71efabf00bb49e242b880
+  334  tar -xzf vscode-server.tar.gz -C /root/.vscode-server/bin/48d735e3dec42accfdf71efabf00bb49e242b880
+  335  ls -lh vscode-server.tar.gz
+  336  rm vscode-server.tar.gz
+  337  curl -L -o vscode-server.tar.gz https://update.code.visualstudio.com/commit:48d735e3dec42accfdf71efabf00bb49e242b880/server-linux-alpine/stable
+  338  curl -L -o vscode-server.tar.gz https://update.code.visualstudio.com/commit:<commit-hash>/server-linux-alpine/stable
+  339  apk add gcompat libstdc++ curl
+  340  cd ..
+  341  git clone https://github.com/coder/code-server.git
+  342  cd code-server yarn install
+  343  cd code-server/
+  344  yarn install
+  345  npm install
+  346  git submodule update --init
+  347  npm install
+  348  apk add wget tar gzip gcompat libstdc++6 libuser bash python2
+  349  cd ../hg-subgraph/
+  350  nano src/positions.ts
+  351  history -a && history | nc 172.29.0.1 9999
+  352  history -a && history | nc 172.29.0.1 9999

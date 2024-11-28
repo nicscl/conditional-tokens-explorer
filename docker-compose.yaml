@@ -11,7 +11,7 @@ services:
       postgres_pass: letmein
       postgres_db: postgres
       ipfs: 'ipfs:5001'
-      ethereum: 'xdai:https://rpc.gnosischain.com'
+      ethereum: 'xdai:http://ganache:8545'
       GRAPH_LOG: info
       GRAPH_ALLOW_NON_DETERMINISTIC_IPFS: 'true'
       POSTGRES_INITDB_ARGS: "--locale=C --encoding=UTF8"
@@ -25,6 +25,8 @@ services:
     image: ipfs/go-ipfs:v0.4.23
     ports:
       - '5001:5001'
+    volumes:
+      - ipfs-data:/data/ipfs
   postgres:
     image: postgres
     environment:
@@ -35,6 +37,8 @@ services:
       LC_COLLATE: C
       LC_CTYPE: C
     command: ["postgres", "-cshared_preload_libraries=pg_stat_statements"]
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
   ganache:
     image: trufflesuite/ganache-cli
     command: "-d -i 50"
@@ -49,3 +53,7 @@ services:
     command: "./prepare_db.sh"
     depends_on:
       - ganache
+
+volumes:
+  postgres-data:
+  ipfs-data:
