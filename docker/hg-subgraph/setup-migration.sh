@@ -84,3 +84,27 @@ echo "Updating root truffle-config.js to use ^0.5.12"
 sed -i "s/version: '\^0.6.0'/version: '\^0.5.12'/g" truffle-config.js
 
 echo "Configuration update complete!"
+
+# Run the migration
+echo "Starting migration..."
+npm run migrate
+
+# Update Web3 provider to use ganache instead of localhost
+echo "Updating Web3 provider to use ganache..."
+sed -i 's|http://localhost:8545|http://ganache:8545|g' ops/render-subgraph-conf.js
+
+# Refresh ABI and render subgraph config
+echo "Refreshing ABI and rendering subgraph config..."
+npm run refresh-abi && npm run render-subgraph-config-local
+
+# Set up the correct Conditional Tokens address
+echo "Setup the right CT address..."
+sed -i -E "s/(address: '0x[a-zA-Z0-9]+')/address: '0xA57B8a5584442B467b4689F1144D269d096A3daF'/g" subgraph.yaml
+
+# Run codegen
+echo "Applying codegen..."
+./node_modules/.bin/graph codegen
+
+# Deploy subgraph with automatic version input
+echo "Deploying subgraph..."
+echo "v0.0.1" | ./node_modules/.bin/graph deploy --node http://graph-node:8020 --ipfs http://ipfs:5001 gnosis/hg
