@@ -97,9 +97,6 @@ sed -i 's|http://localhost:8545|http://ganache:8545|g' ops/render-subgraph-conf.
 echo "Refreshing ABI and rendering subgraph config..."
 npm run refresh-abi && npm run render-subgraph-config-local
 
-# Ensure network is set to local in subgraph.yaml
-sed -i 's/network: development/network: local/g' subgraph.yaml
-sed -i 's/network: mainnet/network: local/g' subgraph.yaml
 
 # Set up the correct Conditional Tokens address
 sed -i -E "s/(address: '0x[a-zA-Z0-9]+')/address: '0xA57B8a5584442B467b4689F1144D269d096A3daF'/g" subgraph.yaml
@@ -108,39 +105,25 @@ sed -i -E "s/(address: '0x[a-zA-Z0-9]+')/address: '0xA57B8a5584442B467b4689F1144
 echo "Running codegen..."
 ./node_modules/.bin/graph codegen
 
-# Build
-echo "Building..."
-npm run build
-
 # Fix the type issue in conditions.ts AFTER build
 echo "Fixing type casting in conditions.ts..."
 sed -i 's/Category\.load(question\.category)/Category.load(question.category as string)/g' src/conditions.ts
 
-# Add ethereum host if not exists and verify
-echo "Setting up ethereum host..."
-if ! grep -q "172.29.0.2 ethereum" /etc/hosts; then
-    echo "172.29.0.2 ethereum" >> /etc/hosts
-fi
+# Build
+echo "Building..."
+npm run build
 
-# Verify the host entry
-if ! getent hosts ethereum | grep -q "172.29.0.2"; then
-    echo "Error: ethereum host entry not properly set"
-    exit 1
-fi
-echo "Ethereum host entry verified: $(getent hosts ethereum)"
+# Update graph node and IPFS endpoints in package.json
+echo "Updating endpoints in package.json..."
+sed -i 's/localhost:8020/graph-node:8020/g' package.json
+sed -i 's/localhost:5021/ipfs:5021/g' package.json
+sed -i 's/localhost:5001/ipfs:5001/g' package.json
 
-# Remove existing deployment
-echo "Removing existing deployment if any..."
-./node_modules/.bin/graph remove --node http://graph-node:8020 gnosis/hg || true
-
-# Create fresh deployment
-echo "Creating new deployment..."
-./node_modules/.bin/graph create --node http://graph-node:8020 gnosis/hg
+# Change all network references from mainnet to xdai
+sed -i 's/network: development/network: xdai/g' subgraph.yaml
 
 # Deploy
-echo "Deploying..."
-./node_modules/.bin/graph deploy \
-  --node http://graph-node:8020 \
-  --ipfs http://ipfs:5001 \
-  gnosis/hg \
-  --version-label 0.0.1
+echo "Creating Local..."
+npm run create-local
+echo "Deploying Local..."
+npm run deploy-local
