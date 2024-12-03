@@ -97,19 +97,37 @@ sed -i 's|http://localhost:8545|http://ganache:8545|g' ops/render-subgraph-conf.
 echo "Refreshing ABI and rendering subgraph config..."
 npm run refresh-abi && npm run render-subgraph-config-local
 
+
 # Set up the correct Conditional Tokens address
-echo "Setup the right CT address..."
 sed -i -E "s/(address: '0x[a-zA-Z0-9]+')/address: '0xA57B8a5584442B467b4689F1144D269d096A3daF'/g" subgraph.yaml
 
-# Run codegen
-echo "Applying codegen..."
+# Run codegen first
+echo "Running codegen..."
 ./node_modules/.bin/graph codegen
+
+# Fix the type issue in conditions.ts AFTER build
+echo "Fixing type casting in conditions.ts..."
+sed -i 's/Category\.load(question\.category)/Category.load(question.category as string)/g' src/conditions.ts
+
+# Build
+echo "Building..."
+npm run build
+
+# Update graph node and IPFS endpoints in package.json
+echo "Updating endpoints in package.json..."
+sed -i 's/localhost:8020/graph-node:8020/g' package.json
+sed -i 's/localhost:5021/ipfs:5021/g' package.json
+sed -i 's/localhost:5001/ipfs:5001/g' package.json
+
+# Change all network references from mainnet to xdai
+sed -i 's/network: development/network: xdai/g' subgraph.yaml
 
 # Update the deploy-local script in package.json to include --version-label 0.0.1
 echo "Updating deploy-local --version-label to 0.0.1"
 sed -i 's/"deploy-local": "graph deploy --node http:\/\/graph-node:8020 --ipfs http:\/\/ipfs:5001 gnosis\/conditional-tokens-gc"/"deploy-local": "graph deploy --node http:\/\/graph-node:8020 --ipfs http:\/\/ipfs:5001 gnosis\/conditional-tokens-gc   --version-label 0.0.1"/g' package.json
 
-
-# Deploy subgraph with automatic version input
-echo "Deploying subgraph..."
-echo "v0.0.1" | ./node_modules/.bin/graph deploy --node http://graph-node:8020 --ipfs http://ipfs:5001 gnosis/hg
+# Deploy
+echo "Creating Local..."
+npm run create-local
+echo "Deploying Local..."
+npm run deploy-local
