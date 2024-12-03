@@ -105,6 +105,11 @@ sed -i -E "s/(address: '0x[a-zA-Z0-9]+')/address: '0xA57B8a5584442B467b4689F1144
 echo "Applying codegen..."
 ./node_modules/.bin/graph codegen
 
+# Update the deploy-local script in package.json to include --version-label 0.0.1
+echo "Updating deploy-local --version-label to 0.0.1"
+sed -i 's/"deploy-local": "graph deploy --node http:\/\/graph-node:8020 --ipfs http:\/\/ipfs:5001 gnosis\/conditional-tokens-gc"/"deploy-local": "graph deploy --node http:\/\/graph-node:8020 --ipfs http:\/\/ipfs:5001 gnosis\/conditional-tokens-gc   --version-label 0.0.1"/g' package.json
+
+
 # Deploy subgraph with automatic version input
 echo "Deploying subgraph..."
 echo "v0.0.1" | ./node_modules/.bin/graph deploy --node http://graph-node:8020 --ipfs http://ipfs:5001 gnosis/hg
