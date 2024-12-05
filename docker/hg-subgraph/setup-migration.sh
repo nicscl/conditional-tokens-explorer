@@ -3,23 +3,46 @@
 # Navigate to the subgraph directory
 cd hg-subgraph
 
+# Check for credentials file
+if [ ! -f "gnosis-credentials.json" ]; then
+    echo "Error: gnosis-credentials.json not found!"
+    echo "Please run create-gnosis-account.sh first and fund the account with xDAI"
+    exit 1
+fi
+
+# Load credentials
+ACCOUNT_INFO=$(cat gnosis-credentials.json)
+ACCOUNT_ADDRESS=$(echo $ACCOUNT_INFO | jq -r '.address')
+PRIVATE_KEY=$(echo $ACCOUNT_INFO | jq -r '.privateKey')
+
+echo "Using account: $ACCOUNT_ADDRESS"
+
+# Install other dependencies
 echo "Installing dependencies..."
 npm install
 npm install solc@0.6.0
+npm install @truffle/hdwallet-provider
 
 # Store all found truffle-config.js locations
 FOUND_CONFIGS=$(find . -name "truffle-config.js")
 echo "Found the following truffle-config.js files:"
 echo "$FOUND_CONFIGS"
 
-# Create our reference truffle-config.js
-cat > reference-truffle-config.js << 'EOL'
+# Create our reference truffle-config.js with the new account
+cat > reference-truffle-config.js << EOL
+const HDWalletProvider = require('@truffle/hdwallet-provider');
+const privateKey = '${PRIVATE_KEY#0x}';
+
 module.exports = {
   networks: {
     local: {
-      host: 'ganache',
-      port: 8545,
-      network_id: 50,
+      provider: () => new HDWalletProvider(
+        privateKey,
+        "https://dimensional-twilight-feather.xdai.quiknode.pro/a791b8561d89ae46154ef37cee61445c7b22f13a/"
+      ),
+      network_id: 100,
+      gas: 12000000,
+      gasPrice: 1000000000,
     },
   },
   compilers: {
@@ -61,13 +84,20 @@ cp node_modules/@realitio/realitio-contracts/package.json node_modules/@realitio
 
 # Create truffle-config.js for @realitio/realitio-contracts/truffle
 echo "Creating truffle-config.js for @realitio/realitio-contracts/truffle..."
-cat > node_modules/@realitio/realitio-contracts/truffle/truffle-config.js << 'EOL'
+cat > node_modules/@realitio/realitio-contracts/truffle/truffle-config.js << EOL
+const HDWalletProvider = require('@truffle/hdwallet-provider');
+const privateKey = '${PRIVATE_KEY#0x}';
+
 module.exports = {
   networks: {
     local: {
-      host: 'ganache',
-      port: 8545,
-      network_id: 50,
+      provider: () => new HDWalletProvider(
+        privateKey,
+        "https://dimensional-twilight-feather.xdai.quiknode.pro/a791b8561d89ae46154ef37cee61445c7b22f13a/"
+      ),
+      network_id: 100,
+      gas: 12000000,
+      gasPrice: 1000000000,
     },
   },
   compilers: {
@@ -87,16 +117,37 @@ echo "Configuration update complete!"
 
 # Run the migration
 echo "Starting migration..."
-npm run migrate
+if ! npm run migrate; then
+    echo "Migration failed!"
+    exit 1
+fi
 
-# Update Web3 provider to use ganache instead of localhost
-echo "Updating Web3 provider to use ganache..."
-sed -i 's|http://localhost:8545|http://ganache:8545|g' ops/render-subgraph-conf.js
+# Check if build/contracts directory exists
+if [ ! -d "build/contracts" ]; then
+    echo "build/contracts directory not found after migration!"
+    exit 1
+fi
+
+# Update Web3 provider to use the QuickNode endpoint
+echo "Updating Web3 provider to use the QuickNode RPC..."
+sed -i 's|http://localhost:8545|https://dimensional-twilight-feather.xdai.quiknode.pro/a791b8561d89ae46154ef37cee61445c7b22f13a/|g' ops/render-subgraph-conf.js
 
 # Refresh ABI and render subgraph config
 echo "Refreshing ABI and rendering subgraph config..."
-npm run refresh-abi && npm run render-subgraph-config-local
+if ! npm run refresh-abi; then
+    echo "Failed to refresh ABI!"
+    exit 1
+fi
+if ! npm run render-subgraph-config-local; then
+    echo "Failed to render subgraph config!"
+    exit 1
+fi
 
+# Check if subgraph.yaml exists
+if [ ! -f "subgraph.yaml" ]; then
+    echo "subgraph.yaml not found after configuration!"
+    exit 1
+fi
 
 # Set up the correct Conditional Tokens address
 sed -i -E "s/(address: '0x[a-zA-Z0-9]+')/address: '0xA57B8a5584442B467b4689F1144D269d096A3daF'/g" subgraph.yaml
