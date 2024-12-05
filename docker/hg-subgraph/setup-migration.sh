@@ -126,8 +126,14 @@ sed -i 's/network: development/network: xdai/g' subgraph.yaml
 echo "Updating deploy-local --version-label to 0.0.1"
 sed -i 's/"deploy-local": "graph deploy --node http:\/\/graph-node:8020 --ipfs http:\/\/ipfs:5001 gnosis\/conditional-tokens-gc"/"deploy-local": "graph deploy --node http:\/\/graph-node:8020 --ipfs http:\/\/ipfs:5001 gnosis\/conditional-tokens-gc   --version-label 0.0.1"/g' package.json
 
-# Deploy
-echo "Creating Local..."
-npm run create-local
-echo "Deploying Local..."
-npm run deploy-local
+# Update package.json to add new gnosis/hg deployment scripts
+echo "Adding gnosis/hg deployment scripts to package.json..."
+sed -i '/\"deploy-local\": /i \    \"create-gnosisHG\": \"graph create --node http:\/\/graph-node:8020 gnosis\/hg\",' package.json
+sed -i '/\"deploy-local\": /i \    \"deploy-gnosisHG\": \"graph deploy --node http:\/\/graph-node:8020 --ipfs http:\/\/ipfs:5001 gnosis\/hg --version-label 0.0.1\",' package.json
+
+# Replace the final deployment section
+# Instead of using create-local and deploy-local, use the new gnosis/hg commands
+echo "Creating Gnosis HG..."
+npm run create-gnosisHG
+echo "Deploying Gnosis HG..."
+npm run deploy-gnosisHG
