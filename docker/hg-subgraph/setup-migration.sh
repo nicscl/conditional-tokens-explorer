@@ -42,7 +42,7 @@ module.exports = {
       ),
       network_id: 100,
       gas: 12000000,
-      gasPrice: 1000000000,
+      gasPrice: 3000000000,
     },
   },
   compilers: {
@@ -97,7 +97,7 @@ module.exports = {
       ),
       network_id: 100,
       gas: 12000000,
-      gasPrice: 1000000000,
+      gasPrice: 3000000000,
     },
   },
   compilers: {

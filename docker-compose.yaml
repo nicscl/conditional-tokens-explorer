@@ -11,7 +11,7 @@ services:
       postgres_pass: letmein
       postgres_db: postgres
       ipfs: 'ipfs:5001'
-      ethereum: 'xdai:http://ganache:8545'
+      ethereum: 'xdai:https://dimensional-twilight-feather.xdai.quiknode.pro/a791b8561d89ae46154ef37cee61445c7b22f13a/'
       GRAPH_LOG: info
       GRAPH_ALLOW_NON_DETERMINISTIC_IPFS: 'true'
       POSTGRES_INITDB_ARGS: "--locale=C --encoding=UTF8"
