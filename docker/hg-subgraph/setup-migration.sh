@@ -1,7 +1,19 @@
 #!/bin/bash
 
+# Load environment variables from .env file
+export $(grep -v '^#' .env | xargs)
+
 # Navigate to the subgraph directory
 cd hg-subgraph
+
+# Create gnosis-credentials.json with the specified content from .env
+echo "Creating gnosis-credentials.json..."
+cat > gnosis-credentials.json << EOL
+{
+  "address": "$ADDRESS",
+  "privateKey": "$PRIVATE_KEY"
+}
+EOL
 
 # Check for credentials file
 if [ ! -f "gnosis-credentials.json" ]; then
@@ -28,7 +40,7 @@ FOUND_CONFIGS=$(find . -name "truffle-config.js")
 echo "Found the following truffle-config.js files:"
 echo "$FOUND_CONFIGS"
 
-# Create our reference truffle-config.js with the new account
+# Create our reference truffle-config.js with updated timeouts
 cat > reference-truffle-config.js << EOL
 const HDWalletProvider = require('@truffle/hdwallet-provider');
 const privateKey = '${PRIVATE_KEY#0x}';
@@ -36,13 +48,28 @@ const privateKey = '${PRIVATE_KEY#0x}';
 module.exports = {
   networks: {
     local: {
-      provider: () => new HDWalletProvider(
-        privateKey,
-        "https://dimensional-twilight-feather.xdai.quiknode.pro/a791b8561d89ae46154ef37cee61445c7b22f13a/"
-      ),
+      provider: () => {
+        // Create a new provider instance for each request to avoid ID conflicts
+        return new HDWalletProvider({
+          privateKeys: [privateKey],
+          providerOrUrl: "$WSS_RPC_URL",
+          pollingInterval: 60000,
+          networkCheckTimeout: 1800000,
+          timeoutBlocks: 2000,
+          confirmations: 3,
+          skipDryRun: true,
+          websockets: true,
+          maxPollingInterval: 120000,
+          maxRetries: 5
+        });
+      },
       network_id: 100,
       gas: 12000000,
       gasPrice: 3000000000,
+      networkCheckTimeout: 1800000,
+      timeoutBlocks: 2000,
+      confirmations: 3,
+      skipDryRun: true
     },
   },
   compilers: {
@@ -82,8 +109,7 @@ echo "Setting up realitio-contracts truffle directory..."
 mkdir -p node_modules/@realitio/realitio-contracts/truffle
 cp node_modules/@realitio/realitio-contracts/package.json node_modules/@realitio/realitio-contracts/truffle/
 
-# Create truffle-config.js for @realitio/realitio-contracts/truffle
-echo "Creating truffle-config.js for @realitio/realitio-contracts/truffle..."
+# Create truffle-config.js for @realitio/realitio-contracts/truffle with updated timeouts
 cat > node_modules/@realitio/realitio-contracts/truffle/truffle-config.js << EOL
 const HDWalletProvider = require('@truffle/hdwallet-provider');
 const privateKey = '${PRIVATE_KEY#0x}';
@@ -91,13 +117,28 @@ const privateKey = '${PRIVATE_KEY#0x}';
 module.exports = {
   networks: {
     local: {
-      provider: () => new HDWalletProvider(
-        privateKey,
-        "https://dimensional-twilight-feather.xdai.quiknode.pro/a791b8561d89ae46154ef37cee61445c7b22f13a/"
-      ),
+      provider: () => {
+        // Create a new provider instance for each request
+        return new HDWalletProvider({
+          privateKeys: [privateKey],
+          providerOrUrl: "$WSS_RPC_URL",
+          pollingInterval: 60000,
+          networkCheckTimeout: 1800000,
+          timeoutBlocks: 2000,
+          confirmations: 3,
+          skipDryRun: true,
+          websockets: true,
+          maxPollingInterval: 120000,
+          maxRetries: 5
+        });
+      },
       network_id: 100,
       gas: 12000000,
       gasPrice: 3000000000,
+      networkCheckTimeout: 1800000,
+      timeoutBlocks: 2000,
+      confirmations: 3,
+      skipDryRun: true
     },
   },
   compilers: {
@@ -115,22 +156,37 @@ sed -i "s/version: '\^0.6.0'/version: '\^0.5.12'/g" truffle-config.js
 
 echo "Configuration update complete!"
 
-# Run the migration
-echo "Starting migration..."
-if ! npm run migrate; then
-    echo "Migration failed!"
-    exit 1
-fi
+# Check SKIP_MIGRATION environment variable
+if [ "$SKIP_MIGRATION" = "TRUE" ]; then
+    echo "Skipping migration as SKIP_MIGRATION is set to TRUE"
+else
+    # Run the migration with increased timeouts and retries
+    echo "Starting migration..."
+    MAX_RETRIES=3
+    RETRY_COUNT=0
+    until npm run migrate || [ $RETRY_COUNT -eq $MAX_RETRIES ]; do
+        RETRY_COUNT=$((RETRY_COUNT+1))
+        echo "Migration failed. Attempt $RETRY_COUNT of $MAX_RETRIES..."
+        sleep 5
+    done
 
-# Check if build/contracts directory exists
-if [ ! -d "build/contracts" ]; then
-    echo "build/contracts directory not found after migration!"
-    exit 1
+    if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
+        echo "Migration failed after $MAX_RETRIES attempts!"
+        exit 1
+    else
+        echo "✨ Migration completed successfully! ✨"
+    fi
+
+    # Check if build/contracts directory exists
+    if [ ! -d "build/contracts" ]; then
+        echo "build/contracts directory not found after migration!"
+        exit 1
+    fi
 fi
 
 # Update Web3 provider to use the QuickNode endpoint
-echo "Updating Web3 provider to use the QuickNode RPC..."
-sed -i 's|http://localhost:8545|https://dimensional-twilight-feather.xdai.quiknode.pro/a791b8561d89ae46154ef37cee61445c7b22f13a/|g' ops/render-subgraph-conf.js
+echo "Updating Web3 provider to use the $RPC_URL..."
+sed -i "s|http://localhost:8545|$RPC_URL|g" ops/render-subgraph-conf.js
 
 # Refresh ABI and render subgraph config
 echo "Refreshing ABI and rendering subgraph config..."

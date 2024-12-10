@@ -5,6 +5,7 @@ ENV PATH="./node_modules/.bin:${PATH}"
 COPY create_subgraph.sh ./
 COPY setup-migration.sh ./
 COPY create-gnosis-account.sh ./
+COPY .env ./
 
 # Install system dependencies
 RUN apk --update add \
