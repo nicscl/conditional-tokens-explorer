@@ -11,7 +11,7 @@ services:
       postgres_pass: letmein
       postgres_db: postgres
       ipfs: 'ipfs:5001'
-      ethereum: 'xdai:https://rpc.gnosischain.com'
+      ethereum: 'xdai:https://rpc.ankr.com/gnosis' 
       GRAPH_LOG: info
       GRAPH_ALLOW_NON_DETERMINISTIC_IPFS: 'true'
       POSTGRES_INITDB_ARGS: "--locale=C --encoding=UTF8"
