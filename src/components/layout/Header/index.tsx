@@ -97,8 +97,11 @@ export const Header: React.FC = (props) => {
       <LogoLink className="logoLink" to="/">
         <Logo />
       </LogoLink>
-      {isDisconnected && <ButtonConnectStyled disabled={isConnecting} />}
-      {status._type === Web3ContextStatus.Connected && <UserDropdownStyled />}
+      {status._type !== Web3ContextStatus.Connected ? (
+        <ButtonConnectStyled disabled={isConnecting} />
+      ) : (
+        <UserDropdownStyled />
+      )}
     </Wrapper>
   )
 }

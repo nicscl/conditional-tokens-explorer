@@ -109,6 +109,14 @@ const web3Modal = new Web3Modal({
   },
 })
 
+window.web3Modal = web3Modal;
+
+declare global {
+  interface Window {
+    web3Modal: any;
+  }
+}
+
 const logger = getLogger('Web3Context')
 
 export const Web3ContextProvider = ({ children }: Props) => {
@@ -150,29 +158,28 @@ export const Web3ContextProvider = ({ children }: Props) => {
   )
 
   const subscribeProvider = React.useCallback(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (provider: any) => {
       logger.log('Trying to subscribe to metamask events...', web3Status._type)
 
-      provider.once('close', () => {
+      provider.on('close', () => {
         logger.log('Provider is closing...')
         resetApp(provider)
       })
 
-      provider.once('disconnect', () => {
+      provider.on('disconnect', () => {
         logger.log('Provider is disconnecting...')
         resetApp(provider)
       })
 
-      provider.once('accountsChanged', async (accounts: string[]) => {
+      provider.on('accountsChanged', async (accounts: string[]) => {
         if (accounts.length > 0) {
           const address = accounts[0]
           logger.log(`Switch account to ${address}`)
 
-          setWeb3Status({
-            ...web3Status,
+          setWeb3Status((prevStatus) => ({
+            ...prevStatus,
             address,
-          } as Connected)
+          } as Connected))
         } else {
           // Metamask send an `accountsChanged` event when lock account
           logger.error('accounts is empty')
@@ -180,17 +187,17 @@ export const Web3ContextProvider = ({ children }: Props) => {
         }
       })
 
-      provider.once('networkChanged', async (networkId: number) => {
+      provider.on('networkChanged', async (networkId: number) => {
         logger.log(`Switch network to ${networkId}`)
 
         // The sign `plus` is needed, because javascript and reasons
         if (NetworkConfig.isKnownNetwork(+networkId)) {
           const networkConfig = new NetworkConfig(networkId)
 
-          setWeb3Status({
-            ...web3Status,
+          setWeb3Status((prevStatus) => ({
+            ...prevStatus,
             networkConfig,
-          } as Connected)
+          } as Connected))
         } else {
           setWeb3Status({
             _type: Web3ContextStatus.WrongNetwork,
@@ -199,7 +206,7 @@ export const Web3ContextProvider = ({ children }: Props) => {
         }
       })
     },
-    [web3Status, resetApp]
+    [resetApp]
   )
 
   const disconnectWeb3Modal = React.useCallback(async () => {
@@ -253,6 +260,7 @@ export const Web3ContextProvider = ({ children }: Props) => {
         const CPKService = new CPKServiceClass(cpk, provider, networkConfig)
 
         const address = await signer.getAddress()
+        console.log('Successfully connected to Gnosis Chain!')
         setWeb3Status({
           _type: Web3ContextStatus.Connected,
           provider,
@@ -274,7 +282,7 @@ export const Web3ContextProvider = ({ children }: Props) => {
     } catch (error) {
       setWeb3Status({ _type: Web3ContextStatus.Error, error } as ErrorWeb3)
     }
-  }, [web3Status, subscribeProvider])
+  }, [subscribeProvider])
 
   const connectInfura = React.useCallback(async () => {
     if (web3Status._type === Web3ContextStatus.Infura) {
@@ -307,7 +315,7 @@ export const Web3ContextProvider = ({ children }: Props) => {
     } catch (error) {
       setWeb3Status({ _type: Web3ContextStatus.Error, error } as ErrorWeb3)
     }
-  }, [web3Status])
+  }, [])
 
   React.useEffect(() => {
     if (web3Modal.cachedProvider) {

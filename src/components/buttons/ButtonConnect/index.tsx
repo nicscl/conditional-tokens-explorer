@@ -1,9 +1,9 @@
 import { darken } from 'polished'
-import React, { ButtonHTMLAttributes } from 'react'
+import React from 'react'
 import styled from 'styled-components'
 
 import { ChevronRight } from 'components/icons/ChevronRight'
-import { useWeb3Disconnected } from 'contexts/Web3Context'
+import { useWeb3Context, Web3ContextStatus } from 'contexts/Web3Context'
 
 const Wrapper = styled.button`
   &.buttonConnect {
@@ -43,17 +43,34 @@ const Text = styled.span`
   margin-right: 10px;
 `
 
-interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
+interface Props extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   className?: string
 }
 
-export const ButtonConnect: React.FC<ButtonHTMLAttributes<HTMLButtonElement>> = (props) => {
+export const ButtonConnect: React.FC<Props> = (props) => {
   const { className, ...restProps } = props
-  const { connect } = useWeb3Disconnected()
+  const { status, connect } = useWeb3Context()
+
+  // Only show button when not connected
+  if (status._type === Web3ContextStatus.Connected) {
+    return null
+  }
+
+  const buttonText = status._type === Web3ContextStatus.WaitingForUser 
+    ? 'Connecting...' 
+    : 'Connect Wallet'
+
+  const isDisabled = status._type === Web3ContextStatus.WaitingForUser || 
+                    status._type === Web3ContextStatus.Connecting
 
   return (
-    <Wrapper className={`buttonConnect ${className}`} onClick={connect} {...restProps}>
-      <Text>Connect a Wallet</Text>
+    <Wrapper 
+      className={`buttonConnect ${className}`} 
+      onClick={connect}
+      disabled={isDisabled}
+      {...restProps}
+    >
+      <Text>{buttonText}</Text>
       <ChevronRight />
     </Wrapper>
   )

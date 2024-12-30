@@ -15,7 +15,7 @@ export const CTE_GRAPH_HTTP_RINKEBY =
   process.env.REACT_APP_CTE_GRAPH_HTTP_RINKEBY ||
   'https://api.thegraph.com/subgraphs/name/gnosis/hg-rinkeby'
 export const CTE_GRAPH_HTTP_GANACHE =
-  process.env.REACT_APP_CTE_GRAPH_HTTP_GANACHE || 'http://localhost:8000/subgraphs/name/gnosis/hg'
+  process.env.REACT_APP_CTE_GRAPH_HTTP_GANACHE || 'https://gateway.thegraph.com/api/37e2c2cd5e5065f09272e42ca5ef79bb/subgraphs/id/7s9rGBffUTL8kDZuxvvpuc46v44iuDarbrADBFw5uVp2'
 export const CTE_GRAPH_HTTP_XDAI =
   process.env.REACT_APP_CTE_GRAPH_HTTP_XDAI ||
   'https://api.thegraph.com/subgraphs/name/davidalbela/conditional-tokens-xdai'
