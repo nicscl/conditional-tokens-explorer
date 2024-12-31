@@ -56,12 +56,23 @@ export const ButtonConnect: React.FC<Props> = (props) => {
     return null
   }
 
-  const buttonText = status._type === Web3ContextStatus.WaitingForUser 
-    ? 'Connecting...' 
-    : 'Connect Wallet'
+  const getButtonText = () => {
+    switch (status._type) {
+      case Web3ContextStatus.WaitingForUser:
+        return 'Connecting...'
+      case Web3ContextStatus.Error:
+        return 'Connect Wallet'  // Reset to connect wallet on error
+      case Web3ContextStatus.WrongNetwork:
+        return 'Switch Network'
+      default:
+        return 'Connect Wallet'
+    }
+  }
 
   const isDisabled = status._type === Web3ContextStatus.WaitingForUser || 
                     status._type === Web3ContextStatus.Connecting
+
+  const buttonText = getButtonText()
 
   return (
     <Wrapper 

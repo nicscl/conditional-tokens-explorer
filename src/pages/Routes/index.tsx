@@ -1,6 +1,7 @@
 import React from 'react'
 import { Redirect, Route, RouteProps, Switch } from 'react-router-dom'
 
+import { ButtonConnect } from 'components/buttons/ButtonConnect'
 import { InfoCard } from 'components/statusInfo/InfoCard'
 import { Web3ContextStatus, useWeb3Context } from 'contexts/Web3Context'
 import { ConditionDetails } from 'pages/ConditionDetails'
@@ -23,7 +24,9 @@ const ProtectedRoute: React.FC<RouteProps> = (props) => {
   return (
     <>
       {status._type === Web3ContextStatus.Error && (
-        <InfoCard message="Error when trying to connect..." title="Error" />
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '20px' }}>
+          <ButtonConnect />
+        </div>
       )}
       {status._type === Web3ContextStatus.WrongNetwork && (
         <InfoCard
