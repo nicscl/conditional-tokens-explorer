@@ -9,11 +9,11 @@ import {
 } from 'types/generatedGQLForOMEN'
 import { getOmenMarketURL } from 'util/tools'
 
-type ValidOmenMarket = {
-  __typename: 'FixedProductMarketMaker'
+type ValidOmenMarket = OmenMarketFromTheGraph & {
+  __typename: "FixedProductMarketMaker"
   id: string
   question: {
-    __typename: 'Question'
+    __typename: "Question"
     title: string
   }
 }
@@ -54,17 +54,17 @@ export const useOmenMarkets = (conditionsIds: string[]) => {
       .then((data) => {
         if (!cancelled) {
           const dataFiltered = data
-            .map((result) => result.data) // [{data: { condition: { fpmm: [{ question, id }]}}}, { data ...}]
+            .map((result) => result.data)
             .filter((data: MaybeConditionWithMarket): data is ConditionWithMarket =>
               hasCondition(data)
             )
             .map((data) => data.condition)
-            .filter((data) => data.fixedProductMarketMakers.length > 0) // [{ fpmm: [{ question, id }]}, {fpmm: ...} ]},
-            .map((data) => data.fixedProductMarketMakers) // [[{ question, id }, ..], [{question, id}, ...] ]},
-            .flat(1) // [ {question, id}, { question, id}]
-            .filter((data: OmenMarketFromTheGraph): data is ValidOmenMarket => hasTitle(data))
+            .filter((data) => data.fixedProductMarketMakers.length > 0)
+            .map((data) => data.fixedProductMarketMakers)
+            .flat(1)
+            .filter((data: OmenMarketFromTheGraph): data is OmenMarketFromTheGraph => hasTitle(data))
             .map((market) => {
-              return { ...market, url: getOmenMarketURL(market.id) }
+              return { ...market, url: getOmenMarketURL(market.id) } as OmenMarketWithURL
             })
           setQueryResult(dataFiltered)
           setLoading(false)
