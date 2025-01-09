@@ -178,6 +178,10 @@ export const navItems = [
     url: '/merge',
   },
   {
+    title: 'Swap Tokens',
+    url: '/swap',
+  },
+  {
     title: 'Report Payouts',
     url: '/report',
   },

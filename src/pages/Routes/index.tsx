@@ -15,6 +15,7 @@ import { PrivacyPolicy } from 'pages/PrivacyPolicy'
 import { RedeemPosition } from 'pages/RedeemPosition'
 import { ReportPayoutsContainer } from 'pages/ReportPayouts'
 import { SplitPosition } from 'pages/SplitPosition'
+import { SwapTokens } from 'pages/SwapTokens'
 import { TermsAndConditions } from 'pages/TermsAndConditions'
 
 const ProtectedRoute: React.FC<RouteProps> = (props) => {
@@ -54,6 +55,7 @@ export const Routes: React.FC = () => {
       <ProtectedRoute component={ReportPayoutsContainer} path="/report/:conditionId?" />
       <ProtectedRoute component={RedeemPosition} path="/redeem/:positionId?" />
       <ProtectedRoute component={MergePositions} path="/merge" />
+      <ProtectedRoute component={SwapTokens} path="/swap" />
       <ProtectedRoute component={TermsAndConditions} path="/terms-and-conditions" />
       <ProtectedRoute component={CookiePolicy} path="/cookie-policy" />
       <ProtectedRoute component={PrivacyPolicy} path="/privacy-policy" />
