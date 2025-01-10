@@ -85,6 +85,38 @@ export const Contents = () => {
   const { condition } = useCondition(quickMergeConfig?.conditionId || null)
   const { data: positions } = usePositionsList(defaultAdvancedFilter)
 
+  // Find mergeable positions for currency token
+  const currencyPositions = useMemo(() => {
+    if (!positions || !quickMergeConfig) return { yes: null, no: null }
+    
+    const yesPosition = positions.find(p => p.id === quickMergeConfig.currencyPositions.yes)
+    const noPosition = positions.find(p => p.id === quickMergeConfig.currencyPositions.no)
+    
+    return { yes: yesPosition || null, no: noPosition || null }
+  }, [positions, quickMergeConfig])
+
+  // Set mergeable positions for quick mode
+  useEffect(() => {
+    if (mode === 'quick' && currencyPositions.yes && currencyPositions.no) {
+      // Set the positions that will be merged
+      setSelectedPositions([currencyPositions.yes, currencyPositions.no])
+      // Set the condition ID
+      if (quickMergeConfig) {
+        setConditionId(quickMergeConfig.conditionId)
+      }
+    }
+  }, [mode, currencyPositions, quickMergeConfig])
+
+  // Calculate max mergeable amount (minimum of YES/NO balances)
+  const maxBalance = useMemo(() => {
+    if (!currencyPositions.yes || !currencyPositions.no) return ZERO_BN
+    
+    const yesBalance = currencyPositions.yes.userBalanceERC1155
+    const noBalance = currencyPositions.no.userBalanceERC1155
+    
+    return yesBalance.gt(noBalance) ? noBalance : yesBalance
+  }, [currencyPositions])
+
   // Find mergeable positions for this condition
   const mergeablePositions = useMemo(() => {
     if (!positions || !condition || !quickMergeConfig) return []
@@ -117,16 +149,16 @@ export const Contents = () => {
   const onMerge = useCallback(async () => {
     try {
       if (
-        mergeablePositions.length > 0 &&
-        condition &&
-        quickMergeConfig &&
         status === Web3ContextStatus.Connected &&
         CPKService &&
-        walletAddress
+        walletAddress &&
+        condition &&
+        quickMergeConfig &&
+        selectedPositions.length > 0
       ) {
         setTransactionStatus(Remote.loading())
 
-        const { collateralToken: posCollateralToken, conditionIds, indexSets } = mergeablePositions[0]
+        const { collateralToken: posCollateralToken, conditionIds, indexSets } = selectedPositions[0]
         const newCollectionsSet = conditionIds.reduce<Array<{ conditionId: string; indexSet: BigNumber }>>(
           (acc, id, i) =>
             id !== quickMergeConfig.conditionId
@@ -138,12 +170,12 @@ export const Contents = () => {
           ? ConditionalTokensService.getCombinedCollectionId(newCollectionsSet)
           : NULL_PARENT_ID
 
-        const partition = mergeablePositions.map(
+        const partition = selectedPositions.map(
           ({ conditionIds, indexSets }) =>
             indexSets[conditionIds.findIndex((id) => quickMergeConfig.conditionId === id)]
         )
         const shouldTransferAmount = isConditionFullIndexSet(
-          mergeablePositions,
+          selectedPositions,
           quickMergeConfig.conditionId,
           condition.outcomeSlotCount
         )
@@ -184,12 +216,12 @@ export const Contents = () => {
       logger.error(error)
     }
   }, [
-    mergeablePositions,
-    condition,
-    quickMergeConfig,
     status,
     CPKService,
     walletAddress,
+    condition,
+    quickMergeConfig,
+    selectedPositions,
     amount,
     CTService,
     isUsingTheCPKAddress,
@@ -206,26 +238,24 @@ export const Contents = () => {
     () =>
       isLoading ||
       status !== Web3ContextStatus.Connected ||
-      mergeablePositions.length === 0 ||
+      (mode === 'quick' ? !currencyPositions.yes || !currencyPositions.no : mergeablePositions.length === 0) ||
       amount.isZero(),
-    [isLoading, status, mergeablePositions, amount]
+    [isLoading, status, mode, currencyPositions, mergeablePositions, amount]
   )
 
   const error = useMemo(() => {
-    if (mergeablePositions.length === 0) {
+    if (mode === 'quick') {
+      if (!currencyPositions.yes || !currencyPositions.no) {
+        return 'No mergeable positions found for this condition'
+      }
+      if (currencyPositions.yes.userBalanceERC1155.isZero() || currencyPositions.no.userBalanceERC1155.isZero()) {
+        return 'Insufficient balance to merge positions'
+      }
+    } else if (mergeablePositions.length === 0) {
       return 'No mergeable positions found for this condition'
     }
     return null
-  }, [mergeablePositions])
-
-  const maxBalance = useMemo(
-    () => {
-      if (mergeablePositions.length === 0) return ZERO_BN
-      const position = mergeablePositions[0]
-      return position.userBalanceERC1155.add(position.userBalanceERC20)
-    },
-    [mergeablePositions]
-  )
+  }, [mode, currencyPositions, mergeablePositions])
 
   const onUsePositionBalance = useCallback(() => {
     if (maxBalance.gt(ZERO_BN)) {
@@ -257,43 +287,77 @@ export const Contents = () => {
       {mode === 'quick' ? (
         quickMergeConfig ? (
           <CenteredCard>
-            <Row>
-              <Amount
-                amount={amount}
-                balance={maxBalance}
-                decimals={decimals}
-                isFromAPosition
-                max={maxBalance.toString()}
-                onAmountChange={onAmountChange}
-                onUseWalletBalance={onUsePositionBalance}
-              />
-            </Row>
-            {error && (
-              <StatusInfoInline status={StatusInfoType.warning}>
-                {error}
+            {!positions ? (
+              <StatusInfoInline status={StatusInfoType.working}>
+                Loading positions...
               </StatusInfoInline>
-            )}
-            <ButtonContainer>
-              <Button disabled={disabled} onClick={onMerge}>
-                Merge Position
-              </Button>
-            </ButtonContainer>
-            {mergeablePositions.length > 0 && (
-              <MergePreview
-                amount={amount}
-                condition={condition}
-                positions={mergeablePositions}
-                token={collateralToken}
-              />
-            )}
-            {mergeResult && collateralToken && (
-              <MergeResultModal
-                amount={amount}
-                closeAction={() => setMergeResult('')}
-                collateralToken={collateralToken}
-                isOpen={!!mergeResult}
-                mergeResult={mergeResult}
-              />
+            ) : (
+              <>
+                <h3>Currency Token Positions (WXDAI)</h3>
+                <Row>
+                  <div>
+                    <strong>YES Position:</strong> {currencyPositions.yes ? (
+                      <>
+                        Balance: {currencyPositions.yes.userBalanceERC1155WithDecimals} (ERC1155)
+                        {currencyPositions.yes.userBalanceERC20.gt(ZERO_BN) && (
+                          <span style={{ color: 'gray' }}>
+                            {' '}+ {currencyPositions.yes.userBalanceERC20WithDecimals} (ERC20 - not mergeable)
+                          </span>
+                        )}
+                      </>
+                    ) : 'No balance'}
+                  </div>
+                </Row>
+                <Row>
+                  <div>
+                    <strong>NO Position:</strong> {currencyPositions.no ? (
+                      <>
+                        Balance: {currencyPositions.no.userBalanceERC1155WithDecimals} (ERC1155)
+                        {currencyPositions.no.userBalanceERC20.gt(ZERO_BN) && (
+                          <span style={{ color: 'gray' }}>
+                            {' '}+ {currencyPositions.no.userBalanceERC20WithDecimals} (ERC20 - not mergeable)
+                          </span>
+                        )}
+                      </>
+                    ) : 'No balance'}
+                  </div>
+                </Row>
+                <Row>
+                  <Amount
+                    amount={amount}
+                    balance={maxBalance}
+                    decimals={decimals}
+                    isFromAPosition
+                    max={maxBalance.toString()}
+                    onAmountChange={onAmountChange}
+                    onUseWalletBalance={onUsePositionBalance}
+                  />
+                </Row>
+                {error && (
+                  <StatusInfoInline status={StatusInfoType.warning}>
+                    {error}
+                  </StatusInfoInline>
+                )}
+                <ButtonContainer>
+                  <Button disabled={disabled} onClick={onMerge}>
+                    Merge Currency Positions
+                  </Button>
+                </ButtonContainer>
+                {/* Company token section - to be added later */}
+                <h3>Company Token Positions</h3>
+                <StatusInfoInline status={StatusInfoType.warning}>
+                  Company token positions will be available soon
+                </StatusInfoInline>
+                {mergeResult && collateralToken && (
+                  <MergeResultModal
+                    amount={amount}
+                    closeAction={() => setMergeResult('')}
+                    collateralToken={collateralToken}
+                    isOpen={!!mergeResult}
+                    mergeResult={mergeResult}
+                  />
+                )}
+              </>
             )}
           </CenteredCard>
         ) : (
