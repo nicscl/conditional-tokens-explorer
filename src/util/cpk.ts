@@ -119,7 +119,10 @@ class CPKEnhanced extends CPK {
 
       this.txCallbacks.set(requestId, { confirm, reject })
 
-      window.parent.postMessage(message, '*')
+      window.parent.postMessage({
+        ...message,
+        messageId: 'cpk_message'
+      }, '*')
     })
   }
 
