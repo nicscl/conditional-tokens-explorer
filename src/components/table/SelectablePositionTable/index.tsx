@@ -252,11 +252,27 @@ const SelectPositionTable: React.FC<Props> = (props) => {
       {
         // eslint-disable-next-line react/display-name
         cell: (row: PositionWithUserBalanceWithDecimals) => (
-          <span onClick={() => onRowClicked(row)}>{row.userBalanceERC1155WithDecimals}</span>
+          <div onClick={() => onRowClicked(row)}>
+            {row.userBalanceERC1155WithDecimals}
+          </div>
         ),
+        maxWidth: '140px',
+        minWidth: '140px',
         name: 'ERC1155',
-        right: true,
-        selector: 'userBalanceERC1155Numbered',
+        selector: 'userBalanceERC1155WithDecimals',
+        sortable: true,
+      },
+      {
+        // eslint-disable-next-line react/display-name
+        cell: (row: PositionWithUserBalanceWithDecimals) => (
+          <div onClick={() => onRowClicked(row)}>
+            {row.userBalanceERC20WithDecimals}
+          </div>
+        ),
+        maxWidth: '140px',
+        minWidth: '140px',
+        name: 'ERC20',
+        selector: 'userBalanceERC20WithDecimals',
         sortable: true,
       },
     ],
