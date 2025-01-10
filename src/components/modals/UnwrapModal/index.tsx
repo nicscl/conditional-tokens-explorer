@@ -9,10 +9,13 @@ import { ButtonContainer } from 'components/pureStyledComponents/ButtonContainer
 import { Row } from 'components/pureStyledComponents/Row'
 import { ZERO_BN } from 'config/constants'
 import { useWeb3ConnectedOrInfura } from 'contexts/Web3Context'
+import { getLogger } from 'util/logger'
 import { TransferOptions } from 'util/types'
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { getTokenBytecode } = require('1155-to-20-helper/src')
+
+const logger = getLogger('UnwrapModal')
 
 const FirstRow = styled(Row)`
   padding-top: 12px;
@@ -23,34 +26,35 @@ const ButtonContainerStyled = styled(ButtonContainer)`
 `
 
 interface Props extends ModalProps {
-  positionId: string
   balance: BigNumber
   decimals: number
   onUnWrap: (transferValue: TransferOptions) => Promise<void>
-  tokenSymbol?: string
-  tokenName?: string
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  accountTo?: any
+  positionId: string
+  tokenName: string
+  tokenSymbol: string
+  wrappedCollateralAddress?: string
+  accountTo?: string
 }
 
-export const UnwrapModal: React.FC<Props> = (props) => {
+export const UnwrapModal: React.FC<Props> = ({
+  accountTo,
+  balance,
+  decimals,
+  onRequestClose,
+  onUnWrap,
+  positionId,
+  tokenName,
+  tokenSymbol,
+  wrappedCollateralAddress,
+  ...restProps
+}) => {
   const { CTService } = useWeb3ConnectedOrInfura()
-
-  const {
-    accountTo,
-    balance,
-    decimals,
-    onRequestClose,
-    onUnWrap,
-    positionId,
-    tokenName,
-    tokenSymbol,
-    ...restProps
-  } = props
 
   const maxBalance = useMemo(() => (balance ? balance : ZERO_BN), [balance])
 
   const [amount, setAmount] = useState<BigNumber>(ZERO_BN)
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
+
   const amountChangeHandler = useCallback((value: BigNumber) => {
     setAmount(value)
   }, [])
@@ -63,45 +67,35 @@ export const UnwrapModal: React.FC<Props> = (props) => {
 
   const isSubmitDisabled = amount.isZero()
 
-  const unWrap = useCallback(
-    (
-      e: React.MouseEvent<HTMLButtonElement, MouseEvent> | React.KeyboardEvent<HTMLInputElement>
-    ) => {
-      const tokenBytes = getTokenBytecode(tokenName, tokenSymbol, decimals)
-
-      const unWrapValues = {
-        address: CTService.address,
-        positionId,
-        amount,
-        accountTo,
-        tokenBytes,
+  const onSubmit = useCallback(
+    async (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+      try {
+        setIsSubmitting(true)
+        const tokenBytes = getTokenBytecode(tokenName, tokenSymbol, decimals, wrappedCollateralAddress)
+        await onUnWrap({ 
+          amount, 
+          positionId, 
+          tokenBytes,
+          address: CTService.address 
+        })
+        if (typeof onRequestClose === 'function') {
+          onRequestClose(e)
+        }
+      } catch (err) {
+        logger.error(err)
+        setIsSubmitting(false)
       }
-
-      if (isSubmitDisabled) return
-
-      onUnWrap(unWrapValues)
-
-      if (onRequestClose) onRequestClose(e)
     },
-    [
-      CTService,
-      amount,
-      isSubmitDisabled,
-      onRequestClose,
-      onUnWrap,
-      positionId,
-      tokenName,
-      tokenSymbol,
-      decimals,
-      accountTo,
-    ]
+    [amount, decimals, onRequestClose, onUnWrap, positionId, tokenName, tokenSymbol, wrappedCollateralAddress, CTService]
   )
 
   const onPressEnter = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === 'Enter') unWrap(e)
+      if (e.key === 'Enter' && !isSubmitDisabled) {
+        onSubmit(e as any)
+      }
     },
-    [unWrap]
+    [onSubmit, isSubmitDisabled]
   )
 
   return (
@@ -126,7 +120,7 @@ export const UnwrapModal: React.FC<Props> = (props) => {
         />
       </FirstRow>
       <ButtonContainerStyled>
-        <Button disabled={isSubmitDisabled} onClick={unWrap}>
+        <Button disabled={isSubmitDisabled || isSubmitting} onClick={onSubmit}>
           Unwrap
         </Button>
       </ButtonContainerStyled>

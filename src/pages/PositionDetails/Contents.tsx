@@ -301,12 +301,29 @@ export const Contents = (props: Props) => {
     async (transferValue: TransferOptions) => {
       if (activeAddress && CPKService) {
         try {
+          logger.info('Starting unwrap in Position Details with values:', {
+            transferValue,
+            activeAddress,
+            CTServiceAddress: CTService?.address,
+            isUsingCPK: isUsingTheCPKAddress(),
+            wrappedTokenAddress
+          })
+
           setTransactionTitle('Unwrapping ERC20')
           setTransfer(Remote.loading())
 
           const { address: addressFrom, amount, positionId, tokenBytes } = transferValue
+          
+          logger.info('Unwrap parameters:', {
+            addressFrom,
+            amount: amount.toString(),
+            positionId,
+            tokenBytes,
+            walletAddress: activeAddress
+          })
 
           if (isUsingTheCPKAddress()) {
+            logger.info('Unwrapping with CPK')
             await CPKService.unwrap({
               CTService,
               WrapperService,
@@ -317,6 +334,7 @@ export const Contents = (props: Props) => {
               tokenBytes,
             })
           } else {
+            logger.info('Unwrapping without CPK')
             await WrapperService.unwrap(addressFrom, positionId, amount, activeAddress, tokenBytes)
           }
 
@@ -324,11 +342,19 @@ export const Contents = (props: Props) => {
           refetchPosition()
 
           setTransfer(Remote.success(transferValue))
+          logger.info('Unwrap completed successfully')
         } catch (err) {
-          logger.error(err)
+          logger.error('Unwrap error in Position Details:', err)
+          logger.error('Error details:', {
+            error: err,
+            transferValue,
+            activeAddress,
+            CTServiceAddress: CTService?.address
+          })
           setTransfer(Remote.failure(err))
         }
       } else {
+        logger.info('Not connected, connecting wallet')
         connect()
       }
     },
@@ -342,6 +368,7 @@ export const Contents = (props: Props) => {
       setTransfer,
       refetchBalances,
       refetchPosition,
+      wrappedTokenAddress
     ]
   )
 
@@ -765,7 +792,7 @@ export const Contents = (props: Props) => {
       )}
       {isUnwrapModalOpen && (
         <UnwrapModal
-          accountTo={activeAddress}
+          accountTo={activeAddress || undefined}
           balance={balanceERC20}
           decimals={ERC1155Decimals}
           isOpen={isUnwrapModalOpen}

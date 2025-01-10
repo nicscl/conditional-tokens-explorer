@@ -21,6 +21,7 @@ import { QuickSplitConfig } from 'config/splitConfig'
 import { getLogger } from 'util/logger'
 import { Remote } from 'util/remoteData'
 import { SplitFromType, SplitStatus } from 'util/types'
+import { QuickWrapUnwrap } from 'components/quickMode/QuickWrapUnwrap'
 
 const logger = getLogger('QuickSplitForm')
 

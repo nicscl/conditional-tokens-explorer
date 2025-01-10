@@ -5,7 +5,10 @@ import styled from 'styled-components'
 
 import { Button } from 'components/buttons/Button'
 import { ButtonType } from 'components/buttons/buttonStylingTypes'
+import { ButtonCopy } from 'components/buttons/ButtonCopy'
 import { CenteredCard } from 'components/common/CenteredCard'
+import { ExternalLink } from 'components/navigation/ExternalLink'
+import { FormatHash } from 'components/text/FormatHash'
 import { Amount } from 'components/form/Amount'
 import { ConditionsDropdown } from 'components/form/ConditionsDropdown'
 import { MergePreview } from 'components/mergePositions/MergePreview'
@@ -25,8 +28,9 @@ import { PositionWithUserBalanceWithDecimals, usePositionsList } from 'hooks/use
 import { ConditionalTokensService } from 'services/conditionalTokens'
 import { getLogger } from 'util/logger'
 import { Remote } from 'util/remoteData'
-import { getTokenSummary, isConditionFullIndexSet, arePositionMergeablesByCondition } from 'util/tools'
-import { AdvancedFilterPosition, CollateralFilterOptions, MergeablePosition, PositionSearchOptions, Token, WrappedCollateralOptions } from 'util/types'
+import { getTokenSummary, isConditionFullIndexSet, arePositionMergeablesByCondition, truncateStringInTheMiddle } from 'util/tools'
+import { AdvancedFilterPosition, CollateralFilterOptions, MergeablePosition, PositionSearchOptions, Token, TransferOptions, WrappedCollateralOptions } from 'util/types'
+import { QuickWrapUnwrap } from 'components/quickMode/QuickWrapUnwrap'
 
 const logger = getLogger('MergePosition')
 
@@ -55,6 +59,7 @@ export const Contents = () => {
     _type: status,
     CPKService,
     CTService,
+    WrapperService,
     address: walletAddress,
     isUsingTheCPKAddress,
     networkConfig,
@@ -76,6 +81,9 @@ export const Contents = () => {
   const [amount, setAmount] = useState<BigNumber>(ZERO_BN)
   const [collateralToken, setCollateralToken] = useState<Maybe<Token>>(null)
   const [mergeResult, setMergeResult] = useState<string>('')
+  const [wrappedTokenInfo, setWrappedTokenInfo] = useState<{ [address: string]: Token }>({})
+  const [transfer, setTransfer] = useState<Remote<TransferOptions>>(Remote.notAsked<TransferOptions>())
+  const [transactionTitle, setTransactionTitle] = useState<string>('')
 
   const quickMergeConfig = useMemo(() => {
     if (!networkConfig) return null
@@ -83,7 +91,7 @@ export const Contents = () => {
   }, [networkConfig])
 
   const { condition } = useCondition(quickMergeConfig?.conditionId || null)
-  const { data: positions } = usePositionsList(defaultAdvancedFilter)
+  const { data: positions, refetchPositions } = usePositionsList(defaultAdvancedFilter)
 
   // Find mergeable positions for currency token
   const currencyPositions = useMemo(() => {
@@ -273,6 +281,36 @@ export const Contents = () => {
     []
   )
 
+  // Add effect to fetch wrapped token info
+  useEffect(() => {
+    const fetchWrappedTokenInfo = async () => {
+      if (!networkConfig || !provider || !currencyPositions.yes?.wrappedTokenAddress || !currencyPositions.no?.wrappedTokenAddress) return
+
+      try {
+        const addresses = [
+          currencyPositions.yes.wrappedTokenAddress,
+          currencyPositions.no.wrappedTokenAddress
+        ].filter((addr): addr is string => Boolean(addr))
+
+        const tokenInfoPromises = addresses.map(address => 
+          getTokenSummary(networkConfig, provider, address)
+        )
+
+        const tokens = await Promise.all(tokenInfoPromises)
+        const tokenMap = addresses.reduce((acc, addr, i) => ({
+          ...acc,
+          [addr]: tokens[i]
+        }), {})
+
+        setWrappedTokenInfo(tokenMap)
+      } catch (err) {
+        logger.error('Error fetching wrapped token info:', err)
+      }
+    }
+
+    fetchWrappedTokenInfo()
+  }, [networkConfig, provider, currencyPositions.yes?.wrappedTokenAddress, currencyPositions.no?.wrappedTokenAddress])
+
   return (
     <>
       <ModeSwitcher>
@@ -299,11 +337,131 @@ export const Contents = () => {
                     <strong>YES Position:</strong> {currencyPositions.yes ? (
                       <>
                         Balance: {currencyPositions.yes.userBalanceERC1155WithDecimals} (ERC1155)
-                        {currencyPositions.yes.userBalanceERC20.gt(ZERO_BN) && (
+                        {currencyPositions.yes.userBalanceERC20.gt(ZERO_BN) && currencyPositions.yes.wrappedTokenAddress && (
                           <span style={{ color: 'gray' }}>
-                            {' '}+ {currencyPositions.yes.userBalanceERC20WithDecimals} (ERC20 - not mergeable)
+                            {' '}+ {currencyPositions.yes.userBalanceERC20WithDecimals} ({wrappedTokenInfo[currencyPositions.yes.wrappedTokenAddress]?.symbol || 'Loading...'})
                           </span>
                         )}
+                        {currencyPositions.yes.wrappedTokenAddress && (
+                          <div style={{ marginTop: '4px', fontSize: '12px' }}>
+                            <span>Wrapped Token Address: </span>
+                            <a href={`https://blockscout.com/xdai/mainnet/address/${currencyPositions.yes.wrappedTokenAddress}`} target="_blank" rel="noopener noreferrer">
+                              <FormatHash hash={truncateStringInTheMiddle(currencyPositions.yes.wrappedTokenAddress, 8, 6)} />
+                            </a>
+                            <ButtonCopy value={currencyPositions.yes.wrappedTokenAddress} />
+                            <ExternalLink href={`https://blockscout.com/xdai/mainnet/address/${currencyPositions.yes.wrappedTokenAddress}`} />
+                          </div>
+                        )}
+                        <QuickWrapUnwrap
+                          balanceERC1155={currencyPositions.yes.userBalanceERC1155}
+                          balanceERC20={currencyPositions.yes.userBalanceERC20}
+                          decimals={decimals}
+                          onUnwrap={async (transferValue) => {
+                            try {
+                              logger.info('Starting unwrap in Merge Positions with values:', {
+                                transferValue,
+                                walletAddress,
+                                CTServiceAddress: CTService?.address,
+                                isUsingCPK: isUsingTheCPKAddress(),
+                                wrappedTokenAddress: currencyPositions.yes?.wrappedTokenAddress
+                              })
+
+                              const yesPosition = currencyPositions.yes
+                              if (!yesPosition || !CPKService || !walletAddress || !CTService || !WrapperService) {
+                                throw new Error('Required services or position data not available')
+                              }
+
+                              const { amount, positionId, tokenBytes } = transferValue
+                              
+                              logger.info('Unwrap parameters:', {
+                                amount: amount.toString(),
+                                positionId,
+                                tokenBytes,
+                                walletAddress
+                              })
+
+                              setTransactionTitle('Unwrapping ERC20')
+                              setTransfer(Remote.loading())
+
+                              if (isUsingTheCPKAddress()) {
+                                logger.info('Unwrapping with CPK')
+                                await CPKService.unwrap({
+                                  CTService,
+                                  WrapperService,
+                                  addressFrom: CTService.address,
+                                  addressTo: walletAddress,
+                                  positionId,
+                                  amount,
+                                  tokenBytes,
+                                })
+                              } else {
+                                logger.info('Unwrapping without CPK')
+                                await WrapperService.unwrap(
+                                  CTService.address,
+                                  positionId,
+                                  amount,
+                                  walletAddress,
+                                  tokenBytes
+                                )
+                              }
+
+                              await refetchPositions()
+                              setTransfer(Remote.success(transferValue))
+                              logger.info('Unwrap completed successfully')
+                            } catch (err) {
+                              logger.error('Unwrap error in Merge Positions:', err)
+                              logger.error('Error details:', {
+                                error: err,
+                                transferValue,
+                                walletAddress,
+                                CTServiceAddress: CTService?.address,
+                                wrappedTokenAddress: currencyPositions.yes?.wrappedTokenAddress
+                              })
+                              setTransfer(Remote.failure(err instanceof Error ? err : new Error(String(err))))
+                            }
+                          }}
+                          onWrap={async (transferValue) => {
+                            try {
+                              if (CPKService && walletAddress && CTService) {
+                                setTransactionTitle('Wrapping ERC1155')
+                                setTransfer(Remote.loading())
+
+                                const { address: addressTo, amount, positionId, tokenBytes } = transferValue
+                                if (isUsingTheCPKAddress()) {
+                                  await CPKService.wrapOrTransfer({
+                                    CTService,
+                                    addressFrom: walletAddress,
+                                    addressTo,
+                                    positionId,
+                                    amount,
+                                    tokenBytes,
+                                  })
+                                } else {
+                                  await CTService.safeTransferFrom(
+                                    walletAddress,
+                                    addressTo,
+                                    positionId,
+                                    amount,
+                                    tokenBytes
+                                  )
+                                }
+
+                                await refetchPositions()
+                                setTransfer(Remote.success(transferValue))
+                              }
+                            } catch (err) {
+                              logger.error('Wrap error:', err)
+                              setTransfer(Remote.failure(err instanceof Error ? err : new Error(String(err))))
+                            }
+                          }}
+                          positionId={currencyPositions.yes.id}
+                          symbol={collateralToken?.symbol || 'WXDAI'}
+                          tokenName={currencyPositions.yes.wrappedTokenAddress ? wrappedTokenInfo[currencyPositions.yes.wrappedTokenAddress]?.name || 'Loading...' : 'Loading...'}
+                          tokenSymbol={currencyPositions.yes.wrappedTokenAddress ? wrappedTokenInfo[currencyPositions.yes.wrappedTokenAddress]?.symbol || 'Loading...' : 'Loading...'}
+                          wrappedName={`Wrapped ERC-1155`}
+                          wrappedSymbol={currencyPositions.yes.wrappedTokenAddress ? wrappedTokenInfo[currencyPositions.yes.wrappedTokenAddress]?.symbol || 'Loading...' : 'Loading...'}
+                          wrappedCollateralAddress={currencyPositions.yes.wrappedTokenAddress || undefined}
+                        />
                       </>
                     ) : 'No balance'}
                   </div>
@@ -313,11 +471,131 @@ export const Contents = () => {
                     <strong>NO Position:</strong> {currencyPositions.no ? (
                       <>
                         Balance: {currencyPositions.no.userBalanceERC1155WithDecimals} (ERC1155)
-                        {currencyPositions.no.userBalanceERC20.gt(ZERO_BN) && (
+                        {currencyPositions.no.userBalanceERC20.gt(ZERO_BN) && currencyPositions.no.wrappedTokenAddress && (
                           <span style={{ color: 'gray' }}>
-                            {' '}+ {currencyPositions.no.userBalanceERC20WithDecimals} (ERC20 - not mergeable)
+                            {' '}+ {currencyPositions.no.userBalanceERC20WithDecimals} ({wrappedTokenInfo[currencyPositions.no.wrappedTokenAddress]?.symbol || 'Loading...'})
                           </span>
                         )}
+                        {currencyPositions.no.wrappedTokenAddress && (
+                          <div style={{ marginTop: '4px', fontSize: '12px' }}>
+                            <span>Wrapped Token Address: </span>
+                            <a href={`https://blockscout.com/xdai/mainnet/address/${currencyPositions.no.wrappedTokenAddress}`} target="_blank" rel="noopener noreferrer">
+                              <FormatHash hash={truncateStringInTheMiddle(currencyPositions.no.wrappedTokenAddress, 8, 6)} />
+                            </a>
+                            <ButtonCopy value={currencyPositions.no.wrappedTokenAddress} />
+                            <ExternalLink href={`https://blockscout.com/xdai/mainnet/address/${currencyPositions.no.wrappedTokenAddress}`} />
+                          </div>
+                        )}
+                        <QuickWrapUnwrap
+                          balanceERC1155={currencyPositions.no.userBalanceERC1155}
+                          balanceERC20={currencyPositions.no.userBalanceERC20}
+                          decimals={decimals}
+                          onUnwrap={async (transferValue) => {
+                            try {
+                              logger.info('Starting unwrap in Merge Positions with values:', {
+                                transferValue,
+                                walletAddress,
+                                CTServiceAddress: CTService?.address,
+                                isUsingCPK: isUsingTheCPKAddress(),
+                                wrappedTokenAddress: currencyPositions.no?.wrappedTokenAddress
+                              })
+
+                              const noPosition = currencyPositions.no
+                              if (!noPosition || !CPKService || !walletAddress || !CTService || !WrapperService) {
+                                throw new Error('Required services or position data not available')
+                              }
+
+                              const { amount, positionId, tokenBytes } = transferValue
+                              
+                              logger.info('Unwrap parameters:', {
+                                amount: amount.toString(),
+                                positionId,
+                                tokenBytes,
+                                walletAddress
+                              })
+
+                              setTransactionTitle('Unwrapping ERC20')
+                              setTransfer(Remote.loading())
+
+                              if (isUsingTheCPKAddress()) {
+                                logger.info('Unwrapping with CPK')
+                                await CPKService.unwrap({
+                                  CTService,
+                                  WrapperService,
+                                  addressFrom: CTService.address,
+                                  addressTo: walletAddress,
+                                  positionId,
+                                  amount,
+                                  tokenBytes,
+                                })
+                              } else {
+                                logger.info('Unwrapping without CPK')
+                                await WrapperService.unwrap(
+                                  CTService.address,
+                                  positionId,
+                                  amount,
+                                  walletAddress,
+                                  tokenBytes
+                                )
+                              }
+
+                              await refetchPositions()
+                              setTransfer(Remote.success(transferValue))
+                              logger.info('Unwrap completed successfully')
+                            } catch (err) {
+                              logger.error('Unwrap error in Merge Positions:', err)
+                              logger.error('Error details:', {
+                                error: err,
+                                transferValue,
+                                walletAddress,
+                                CTServiceAddress: CTService?.address,
+                                wrappedTokenAddress: currencyPositions.no?.wrappedTokenAddress
+                              })
+                              setTransfer(Remote.failure(err instanceof Error ? err : new Error(String(err))))
+                            }
+                          }}
+                          onWrap={async (transferValue) => {
+                            try {
+                              if (CPKService && walletAddress && CTService) {
+                                setTransactionTitle('Wrapping ERC1155')
+                                setTransfer(Remote.loading())
+
+                                const { address: addressTo, amount, positionId, tokenBytes } = transferValue
+                                if (isUsingTheCPKAddress()) {
+                                  await CPKService.wrapOrTransfer({
+                                    CTService,
+                                    addressFrom: walletAddress,
+                                    addressTo,
+                                    positionId,
+                                    amount,
+                                    tokenBytes,
+                                  })
+                                } else {
+                                  await CTService.safeTransferFrom(
+                                    walletAddress,
+                                    addressTo,
+                                    positionId,
+                                    amount,
+                                    tokenBytes
+                                  )
+                                }
+
+                                await refetchPositions()
+                                setTransfer(Remote.success(transferValue))
+                              }
+                            } catch (err) {
+                              logger.error('Wrap error:', err)
+                              setTransfer(Remote.failure(err instanceof Error ? err : new Error(String(err))))
+                            }
+                          }}
+                          positionId={currencyPositions.no.id}
+                          symbol={collateralToken?.symbol || 'WXDAI'}
+                          tokenName={currencyPositions.no.wrappedTokenAddress ? wrappedTokenInfo[currencyPositions.no.wrappedTokenAddress]?.name || 'Loading...' : 'Loading...'}
+                          tokenSymbol={currencyPositions.no.wrappedTokenAddress ? wrappedTokenInfo[currencyPositions.no.wrappedTokenAddress]?.symbol || 'Loading...' : 'Loading...'}
+                          wrappedName={`Wrapped ERC-1155`}
+                          wrappedSymbol={currencyPositions.no.wrappedTokenAddress ? wrappedTokenInfo[currencyPositions.no.wrappedTokenAddress]?.symbol || 'Loading...' : 'Loading...'}
+                          wrappedCollateralAddress={currencyPositions.no.wrappedTokenAddress || undefined}
+                        />
                       </>
                     ) : 'No balance'}
                   </div>

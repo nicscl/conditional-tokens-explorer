@@ -501,3 +501,16 @@ export const waitForBlockToSync = async (networkConfig: NetworkConfig, blockNum:
     await sleep()
   }
 }
+
+export const getTokenBytecode = (
+  name: string,
+  symbol: string,
+  decimals: number,
+  wrappedCollateralAddress?: string
+): string => {
+  const bytecode = ethers.utils.defaultAbiCoder.encode(
+    ['string', 'string', 'uint8', 'address'],
+    [name, symbol, decimals, wrappedCollateralAddress || ethers.constants.AddressZero]
+  )
+  return bytecode
+}
