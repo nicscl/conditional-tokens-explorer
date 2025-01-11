@@ -59,6 +59,11 @@ const UnwrapStep = styled.div`
   }
 `
 
+const StyledStatusInfo = styled(StatusInfoInline)`
+  margin-left: 20px;
+  margin-top: 4px;
+`
+
 const defaultAdvancedFilter: AdvancedFilterPosition = {
   CollateralValue: {
     type: CollateralFilterOptions.All,
@@ -103,6 +108,8 @@ export const Contents = () => {
   const [wrappedTokenInfo, setWrappedTokenInfo] = useState<{ [address: string]: Token }>({})
   const [transfer, setTransfer] = useState<Remote<TransferOptions>>(Remote.notAsked<TransferOptions>())
   const [transactionTitle, setTransactionTitle] = useState<string>('')
+
+  const [unwrapStatus, setUnwrapStatus] = useState<{ success: boolean; message: string }>({ success: false, message: '' });
 
   const quickMergeConfig = useMemo(() => {
     if (!networkConfig) return null
@@ -798,7 +805,7 @@ export const Contents = () => {
                                 walletAddress
                               })
 
-                              setTransactionTitle('Unwrapping ERC20')
+                              setTransactionTitle('Unwrapping YES Position ERC20')
                               setTransfer(Remote.loading())
 
                               if (isUsingTheCPKAddress()) {
@@ -935,7 +942,7 @@ export const Contents = () => {
                                 walletAddress
                               })
 
-                              setTransactionTitle('Unwrapping ERC20')
+                              setTransactionTitle('Unwrapping NO Position ERC20')
                               setTransfer(Remote.loading())
 
                               if (isUsingTheCPKAddress()) {
@@ -1044,72 +1051,115 @@ export const Contents = () => {
                             if (!position) return null;
                             
                             return (
-                              <UnwrapStep
-                                key={index}
-                                onClick={() => {
-                                  logger.info('Starting click unwrap flow - Initial state:', {
-                                    step: {
-                                      type: step.type,
-                                      amount: step.amount.toString(),
-                                      symbol: step.symbol
-                                    },
-                                    position: {
-                                      id: position.id,
-                                      wrappedTokenAddress: position.wrappedTokenAddress,
-                                      userBalanceERC1155: position.userBalanceERC1155.toString(),
-                                      userBalanceERC20: position.userBalanceERC20.toString()
-                                    },
-                                    services: {
-                                      hasCTService: !!CTService,
-                                      hasWrapperService: !!WrapperService,
-                                      walletAddress
+                              <div key={index}>
+                                <UnwrapStep
+                                  onClick={async () => {
+                                    try {
+                                      logger.info('Starting click unwrap flow - Initial state:', {
+                                        step: {
+                                          type: step.type,
+                                          amount: step.amount.toString(),
+                                          symbol: step.symbol
+                                        },
+                                        position: {
+                                          id: position.id,
+                                          wrappedTokenAddress: position.wrappedTokenAddress,
+                                          userBalanceERC1155: position.userBalanceERC1155.toString(),
+                                          userBalanceERC20: position.userBalanceERC20.toString()
+                                        },
+                                        services: {
+                                          hasCTService: !!CTService,
+                                          hasWrapperService: !!WrapperService,
+                                          walletAddress
+                                        }
+                                      });
+
+                                      setTransfer(Remote.loading());
+
+                                      const tokenBytes = getTokenBytecode(
+                                        'Wrapped ERC-1155',
+                                        step.type === 'YES' ? 'FUTA_Y' : 'FUTA_N',
+                                        decimals,
+                                        position.wrappedTokenAddress
+                                      );
+
+                                      logger.info('Click unwrap - Created tokenBytes:', {
+                                        tokenBytes,
+                                        params: {
+                                          tokenName: 'Wrapped ERC-1155',
+                                          tokenSymbol: step.type === 'YES' ? 'FUTA_Y' : 'FUTA_N',
+                                          decimals,
+                                          wrappedTokenAddress: position.wrappedTokenAddress
+                                        }
+                                      });
+
+                                      const transferValue: TransferOptions = {
+                                        amount: step.amount,
+                                        positionId: position.id,
+                                        tokenBytes,
+                                        address: CTService?.address || ''
+                                      };
+
+                                      logger.info('Click unwrap - Created transferValue:', {
+                                        transferValue: {
+                                          amount: transferValue.amount.toString(),
+                                          positionId: transferValue.positionId,
+                                          tokenBytes: transferValue.tokenBytes,
+                                          address: transferValue.address
+                                        }
+                                      });
+
+                                      if (step.type === 'YES' && currencyPositions.yes) {
+                                        setTransactionTitle('Unwrapping YES Position ERC20');
+                                        await onUnwrapYes(transferValue);
+                                      } else if (step.type === 'NO' && currencyPositions.no) {
+                                        setTransactionTitle('Unwrapping NO Position ERC20');
+                                        await onUnwrapNo(transferValue);
+                                      }
+
+                                      // After successful unwrap
+                                      await refetchPositions();
+                                      setUnwrapStatus({ 
+                                        success: true, 
+                                        message: `Successfully unwrapped ${ethers.utils.formatUnits(step.amount, decimals)} ${step.symbol} from ${step.type} position` 
+                                      });
+                                      
+                                      // Clear loading state
+                                      setTransfer(Remote.success(transferValue));
+
+                                      // Clear success message after 3 seconds
+                                      setTimeout(() => {
+                                        setUnwrapStatus({ success: false, message: '' });
+                                        setTransfer(Remote.notAsked()); // Also clear the transfer state
+                                      }, 3000);
+
+                                    } catch (err) {
+                                      setUnwrapStatus({ 
+                                        success: false, 
+                                        message: `Failed to unwrap: ${err instanceof Error ? err.message : String(err)}` 
+                                      });
+                                      setTransfer(Remote.failure(err instanceof Error ? err : new Error(String(err))));
                                     }
-                                  });
-
-                                  const tokenBytes = getTokenBytecode(
-                                    'Wrapped ERC-1155',
-                                    step.type === 'YES' ? 'FUTA_Y' : 'FUTA_N',
-                                    decimals,
-                                    position.wrappedTokenAddress
-                                  );
-
-                                  logger.info('Click unwrap - Created tokenBytes:', {
-                                    tokenBytes,
-                                    params: {
-                                      tokenName: 'Wrapped ERC-1155',
-                                      tokenSymbol: step.type === 'YES' ? 'FUTA_Y' : 'FUTA_N',
-                                      decimals,
-                                      wrappedTokenAddress: position.wrappedTokenAddress
-                                    }
-                                  });
-
-                                  const transferValue: TransferOptions = {
-                                    amount: step.amount,
-                                    positionId: position.id,
-                                    tokenBytes,
-                                    address: CTService?.address || ''
-                                  };
-
-                                  logger.info('Click unwrap - Created transferValue:', {
-                                    transferValue: {
-                                      amount: transferValue.amount.toString(),
-                                      positionId: transferValue.positionId,
-                                      tokenBytes: transferValue.tokenBytes,
-                                      address: transferValue.address
-                                    }
-                                  });
-
-                                  if (step.type === 'YES' && currencyPositions.yes) {
-                                    setTransactionTitle('Unwrapping YES Position ERC20');
-                                    onUnwrapYes(transferValue);
-                                  } else if (step.type === 'NO' && currencyPositions.no) {
-                                    setTransactionTitle('Unwrapping NO Position ERC20');
-                                    onUnwrapNo(transferValue);
-                                  }
-                                }}
-                              >
-                                {index + 1}. Click to unwrap {ethers.utils.formatUnits(step.amount, decimals)} {step.symbol} from {step.type} position
-                              </UnwrapStep>
+                                  }}
+                                >
+                                  {index + 1}. Click to unwrap {ethers.utils.formatUnits(step.amount, decimals)} {step.symbol} from {step.type} position
+                                </UnwrapStep>
+                                {transfer.isLoading() && step.type === (transactionTitle.includes('YES') ? 'YES' : 'NO') && (
+                                  <StyledStatusInfo status={StatusInfoType.working}>
+                                    Unwrapping {step.type} position...
+                                  </StyledStatusInfo>
+                                )}
+                                {transfer.isSuccess() && unwrapStatus.success && step.type === (transactionTitle.includes('YES') ? 'YES' : 'NO') && (
+                                  <StyledStatusInfo status={StatusInfoType.success}>
+                                    {unwrapStatus.message}
+                                  </StyledStatusInfo>
+                                )}
+                                {transfer.isFailure() && !unwrapStatus.success && step.type === (transactionTitle.includes('YES') ? 'YES' : 'NO') && (
+                                  <StyledStatusInfo status={StatusInfoType.error}>
+                                    {unwrapStatus.message}
+                                  </StyledStatusInfo>
+                                )}
+                              </div>
                             );
                           })}
                           <div style={{ marginTop: '8px' }}>
