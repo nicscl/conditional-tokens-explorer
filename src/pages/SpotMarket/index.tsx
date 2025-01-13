@@ -42,12 +42,12 @@ const BuySellTabs = styled.div`
   margin-bottom: 24px;
 `
 
-const Tab = styled.button<{ active: boolean }>`
+const Tab = styled.button<{ active: boolean; isSell?: boolean }>`
   padding: 12px 24px;
   border: none;
   background: none;
-  color: ${props => props.active ? '#22c55e' : '#666'};
-  border-bottom: 2px solid ${props => props.active ? '#22c55e' : 'transparent'};
+  color: ${props => props.active ? (props.isSell ? '#ef4444' : '#22c55e') : '#666'};
+  border-bottom: 2px solid ${props => props.active ? (props.isSell ? '#ef4444' : '#22c55e') : 'transparent'};
   cursor: pointer;
 `
 
@@ -69,12 +69,12 @@ const OutcomeButtons = styled.div`
   gap: 8px;
 `
 
-const OutcomeButton = styled.button<{ active: boolean }>`
+const OutcomeButton = styled.button<{ active: boolean; isFail?: boolean }>`
   padding: 16px;
   border-radius: 8px;
-  border: 1px solid ${props => props.active ? '#22c55e' : '#ddd'};
-  background: ${props => props.active ? 'rgba(34, 197, 94, 0.1)' : 'white'};
-  color: ${props => props.active ? '#22c55e' : '#666'};
+  border: 1px solid ${props => props.active ? (props.isFail ? '#ef4444' : '#22c55e') : '#ddd'};
+  background: ${props => props.active ? (props.isFail ? 'rgba(239, 68, 68, 0.1)' : 'rgba(34, 197, 94, 0.1)') : 'white'};
+  color: ${props => props.active ? (props.isFail ? '#ef4444' : '#22c55e') : '#666'};
   cursor: pointer;
 `
 
@@ -397,7 +397,7 @@ export const SpotMarket = () => {
         
         <BuySellTabs>
           <Tab active={side === 'buy'} onClick={() => setSide('buy')}>Buy</Tab>
-          <Tab active={side === 'sell'} onClick={() => setSide('sell')}>Sell</Tab>
+          <Tab active={side === 'sell'} isSell onClick={() => setSide('sell')}>Sell</Tab>
         </BuySellTabs>
 
         <OutcomeSection>
@@ -414,6 +414,7 @@ export const SpotMarket = () => {
             </OutcomeButton>
             <OutcomeButton 
               active={outcome === 'fail'} 
+              isFail
               onClick={() => setOutcome('fail')}
             >
               Fail
