@@ -14,6 +14,7 @@ import { PrepareCondition } from 'pages/PrepareCondition'
 import { PrivacyPolicy } from 'pages/PrivacyPolicy'
 import { RedeemPosition } from 'pages/RedeemPosition'
 import { ReportPayoutsContainer } from 'pages/ReportPayouts'
+import { SpotMarket } from 'pages/SpotMarket'
 import { SplitPosition } from 'pages/SplitPosition'
 import { SwapTokens } from 'pages/SwapTokens'
 import { TermsAndConditions } from 'pages/TermsAndConditions'
@@ -56,6 +57,7 @@ export const Routes: React.FC = () => {
       <ProtectedRoute component={RedeemPosition} path="/redeem/:positionId?" />
       <ProtectedRoute component={MergePositions} path="/merge" />
       <ProtectedRoute component={SwapTokens} path="/swap" />
+      <ProtectedRoute component={SpotMarket} path="/spot-market" />
       <ProtectedRoute component={TermsAndConditions} path="/terms-and-conditions" />
       <ProtectedRoute component={CookiePolicy} path="/cookie-policy" />
       <ProtectedRoute component={PrivacyPolicy} path="/privacy-policy" />

@@ -182,6 +182,10 @@ export const navItems = [
     url: '/swap',
   },
   {
+    title: 'Spot Market',
+    url: '/spot-market',
+  },
+  {
     title: 'Report Payouts',
     url: '/report',
   },
