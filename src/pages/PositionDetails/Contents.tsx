@@ -788,6 +788,7 @@ export const Contents = (props: Props) => {
           positionId={positionId}
           tokenWrappedName={!balanceERC20 || balanceERC20.isZero() ? '' : ERC20Name}
           tokenWrappedSymbol={!balanceERC20 || balanceERC20.isZero() ? '' : ERC20Symbol}
+          wrappedCollateralTokenAddress={wrappedTokenAddress}
         />
       )}
       {isUnwrapModalOpen && (

@@ -32,6 +32,7 @@ interface Props extends ModalProps {
   collateralSymbol?: string
   tokenWrappedSymbol?: string
   tokenWrappedName?: string
+  wrappedCollateralTokenAddress: string
 }
 
 export const WrapModal: React.FC<Props> = (props) => {
@@ -46,6 +47,7 @@ export const WrapModal: React.FC<Props> = (props) => {
     positionId,
     tokenWrappedName,
     tokenWrappedSymbol,
+    wrappedCollateralTokenAddress,
     ...restProps
   } = props
 
@@ -75,7 +77,7 @@ export const WrapModal: React.FC<Props> = (props) => {
     (
       e: React.MouseEvent<HTMLButtonElement, MouseEvent> | React.KeyboardEvent<HTMLInputElement>
     ) => {
-      const tokenBytes = getTokenBytecode(tokenName, tokenSymbol, decimals)
+      const tokenBytes = getTokenBytecode(tokenName, tokenSymbol, decimals, wrappedCollateralTokenAddress)
       const wrapValues = {
         amount,
         address: WrapperService.address,
@@ -99,6 +101,7 @@ export const WrapModal: React.FC<Props> = (props) => {
       tokenName,
       tokenSymbol,
       decimals,
+      wrappedCollateralTokenAddress,
     ]
   )
 

@@ -10,6 +10,7 @@ import { Row } from 'components/pureStyledComponents/Row'
 import { ZERO_BN } from 'config/constants'
 import { useWeb3ConnectedOrInfura } from 'contexts/Web3Context'
 import { TransferOptions } from 'util/types'
+import { WrapConfig } from 'config/mergeConfig'
 
 const WrapUnwrapBadge = styled(Button)`
   font-size: 12px;
@@ -24,11 +25,7 @@ interface Props {
   balanceERC20: BigNumber
   decimals: number
   symbol: string
-  tokenName?: string
-  tokenSymbol?: string
-  wrappedSymbol?: string
-  wrappedName?: string
-  wrappedCollateralAddress?: string
+  wrap: WrapConfig
   onWrap: (transferValue: TransferOptions) => Promise<void>
   onUnwrap: (transferValue: TransferOptions) => Promise<void>
 }
@@ -39,11 +36,7 @@ export const QuickWrapUnwrap: React.FC<Props> = ({
   balanceERC20,
   decimals,
   symbol,
-  tokenName = symbol,
-  tokenSymbol = symbol,
-  wrappedSymbol,
-  wrappedName,
-  wrappedCollateralAddress,
+  wrap,
   onWrap,
   onUnwrap,
 }) => {
@@ -81,8 +74,9 @@ export const QuickWrapUnwrap: React.FC<Props> = ({
         onRequestClose={closeWrapModal}
         onWrap={onWrap}
         positionId={positionId}
-        tokenWrappedName={wrappedName}
-        tokenWrappedSymbol={wrappedSymbol}
+        tokenWrappedName={wrap.tokenName}
+        tokenWrappedSymbol={wrap.tokenSymbol}
+        wrappedCollateralTokenAddress={wrap.wrappedCollateralTokenAddress}
       />
       <UnwrapModal
         balance={balanceERC20}
@@ -91,9 +85,9 @@ export const QuickWrapUnwrap: React.FC<Props> = ({
         onRequestClose={closeUnwrapModal}
         onUnWrap={onUnwrap}
         positionId={positionId}
-        tokenName={tokenName}
-        tokenSymbol={tokenSymbol}
-        wrappedCollateralAddress={wrappedCollateralAddress}
+        tokenName={wrap.tokenName}
+        tokenSymbol={wrap.tokenSymbol}
+        wrappedCollateralAddress={wrap.wrappedCollateralTokenAddress}
       />
     </>
   )
