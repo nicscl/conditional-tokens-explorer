@@ -1,6 +1,6 @@
 import { BigNumber } from 'ethers/utils'
 import { ethers } from 'ethers'
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState, useRef } from 'react'
 import styled from 'styled-components'
 import { Web3ContextStatus, useWeb3ConnectedOrInfura } from 'contexts/Web3Context'
 import { useActiveAddress } from 'hooks/useActiveAddress'
@@ -113,6 +113,14 @@ const SpotMarketButton = styled.button<{ disabled?: boolean }>`
   &:hover:not(:disabled) {
     background: #16a34a;
   }
+`
+
+const SwapFrame = styled.iframe`
+  border: none;
+  width: 100%;
+  height: 640px;
+  border-radius: 8px;
+  margin-top: 20px;
 `
 
 interface Balances {
@@ -267,6 +275,8 @@ export const SpotMarket: React.FC = () => {
   const [side, setSide] = useState<'buy' | 'sell'>('buy')
   const [showConfirmation, setShowConfirmation] = useState(false)
   const [walletBalance, setWalletBalance] = useState<BigNumber>(ZERO_BN)
+  const [showSwap, setShowSwap] = useState(false)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
 
   // Get the split config for the current network
   const config = quickSplitConfigs[networkConfig?.networkId as NetworkIds]?.[0]
@@ -437,6 +447,50 @@ export const SpotMarket: React.FC = () => {
     return amountBN.gt(walletBalance)
   }, [amount, collateral, walletBalance])
 
+  const handleWrap = async () => {
+    try {
+      const data = transactionStatus.get()
+      const config = quickMergeConfigs[networkConfig?.networkId as NetworkIds]?.[0]
+      if (!data || !config || !collateral || !WrapperService || !walletAddress) return
+
+      const positionId = outcome === 'approval' ? data.positionIds.yes : data.positionIds.no
+      const wrapConfig = outcome === 'approval' 
+        ? config.currencyPositions.yes.wrap 
+        : config.currencyPositions.no.wrap
+
+      const amountBN = ethers.utils.parseUnits(amount, collateral.decimals)
+      const tokenBytes = getTokenBytecode(
+        wrapConfig.tokenName,
+        wrapConfig.tokenSymbol,
+        collateral.decimals,
+        wrapConfig.wrappedCollateralTokenAddress
+      )
+
+      const wrapValues = {
+        amount: amountBN,
+        address: WrapperService.address,
+        positionId,
+        tokenBytes,
+      }
+
+      await CTService?.safeTransferFrom(
+        walletAddress,
+        wrapValues.address,
+        wrapValues.positionId,
+        wrapValues.amount,
+        wrapValues.tokenBytes
+      )
+
+      // After successful wrap, show the swap iframe
+      setShowSwap(true)
+    } catch (error) {
+      logger.error('Wrap failed:', {
+        error: error instanceof Error ? error.message : String(error),
+        errorObject: error
+      })
+    }
+  }
+
   return (
     <Container>
       <SpotMarketCard>
@@ -507,57 +561,22 @@ export const SpotMarket: React.FC = () => {
           Split Position
         </SpotMarketButton>
 
-        {showConfirmation && transactionStatus.isSuccess() && (
+        {showConfirmation && transactionStatus.isSuccess() && !showSwap && (
           <ButtonContainer>
-            {(() => {
-              const data = transactionStatus.get()
-              const config = quickMergeConfigs[networkConfig?.networkId as NetworkIds]?.[0]
-              if (!data || !config || !collateral || !WrapperService) return null
-
-              const positionId = outcome === 'approval' ? data.positionIds.yes : data.positionIds.no
-              const wrapConfig = outcome === 'approval' 
-                ? config.currencyPositions.yes.wrap 
-                : config.currencyPositions.no.wrap
-
-              const amountBN = ethers.utils.parseUnits(amount, collateral.decimals)
-              const tokenBytes = getTokenBytecode(
-                wrapConfig.tokenName,
-                wrapConfig.tokenSymbol,
-                collateral.decimals,
-                wrapConfig.wrappedCollateralTokenAddress
-              )
-
-              const handleWrap = async () => {
-                logger.info('Executing wrap with:', {
-                  positionId,
-                  amount: amountBN.toString(),
-                  tokenBytes: tokenBytes,
-                  wrapConfig
-                })
-
-                const wrapValues = {
-                  amount: amountBN,
-                  address: WrapperService.address,
-                  positionId,
-                  tokenBytes,
-                }
-
-                await CTService?.safeTransferFrom(
-                  walletAddress || '',
-                  wrapValues.address,
-                  wrapValues.positionId,
-                  wrapValues.amount,
-                  wrapValues.tokenBytes
-                )
-              }
-
-              return (
-                <Button onClick={handleWrap}>
-                  Wrap
-                </Button>
-              )
-            })()}
+            <Button onClick={handleWrap}>
+              Wrap
+            </Button>
           </ButtonContainer>
+        )}
+
+        {showSwap && (
+          <SwapFrame
+            ref={iframeRef}
+            src={`http://18.229.197.237:3002/iframe/swap?inputCurrency=ETH&outputCurrency=0x2995D1317DcD4f0aB89f4AE60F3f020A4F17C7CE&exactAmount=${amount}`}
+            title="Sushiswap Widget"
+            allow="clipboard-write; clipboard-read"
+            sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
+          />
         )}
       </SpotMarketCard>
     </Container>

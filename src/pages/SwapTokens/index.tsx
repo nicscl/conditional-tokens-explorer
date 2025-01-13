@@ -144,7 +144,7 @@ export const SwapTokens: React.FC = () => {
         {isConnected && (
           <SwapFrame
             ref={iframeRef}
-            src="http://18.229.197.237:3002/iframe/swap?inputCurrency=ETH&outputCurrency=0x38EEFf6a964ac441B900DEB6bF25C85BE85A32a0"
+            src="http://18.229.197.237:3002/iframe/swap?inputCurrency=0x38eeff6a964ac441b900deb6bf25c85be85a32a0&outputCurrency=ETH&exactAmount=0.01"
             title="Sushiswap Widget"
             allow="clipboard-write; clipboard-read"
             sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
