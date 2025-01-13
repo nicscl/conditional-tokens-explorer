@@ -1,7 +1,6 @@
 import { BigNumber } from 'ethers/utils'
 import React, { useCallback, useState } from 'react'
 import styled from 'styled-components'
-
 import { Button } from 'components/buttons'
 import { ButtonType } from 'components/buttons/buttonStylingTypes'
 import { WrapModal } from 'components/modals/WrapModal'
@@ -11,6 +10,9 @@ import { ZERO_BN } from 'config/constants'
 import { useWeb3ConnectedOrInfura } from 'contexts/Web3Context'
 import { TransferOptions } from 'util/types'
 import { WrapConfig } from 'config/mergeConfig'
+import { getLogger } from 'util/logger'
+
+const logger = getLogger('QuickWrapUnwrap')
 
 const WrapUnwrapBadge = styled(Button)`
   font-size: 12px;
@@ -43,7 +45,18 @@ export const QuickWrapUnwrap: React.FC<Props> = ({
   const [isWrapModalOpen, setIsWrapModalOpen] = useState(false)
   const [isUnwrapModalOpen, setIsUnwrapModalOpen] = useState(false)
 
-  const openWrapModal = useCallback(() => setIsWrapModalOpen(true), [])
+  const openWrapModal = useCallback(() => {
+    logger.info('Opening wrap modal with:', {
+      positionId,
+      positionIdType: typeof positionId,
+      balanceERC1155: balanceERC1155.toString(),
+      decimals,
+      symbol,
+      wrap
+    })
+    setIsWrapModalOpen(true)
+  }, [positionId, balanceERC1155, decimals, symbol, wrap])
+
   const closeWrapModal = useCallback(() => setIsWrapModalOpen(false), [])
   const openUnwrapModal = useCallback(() => setIsUnwrapModalOpen(true), [])
   const closeUnwrapModal = useCallback(() => setIsUnwrapModalOpen(false), [])

@@ -518,4 +518,12 @@ export class ConditionalTokensService {
     const setApprovalForAllInterface = new Interface(conditionalTokensAbi)
     return setApprovalForAllInterface.functions.setApprovalForAll.encode([spenderAccount, true])
   }
+
+  getTokenBytes(tokenName: string, tokenSymbol: string, decimals: number, wrappedTokenAddress: string): string {
+    const abiCoder = new ethers.utils.AbiCoder()
+    return abiCoder.encode(
+      ['tuple(string,string,uint8,address)'],
+      [[tokenName, tokenSymbol, decimals, wrappedTokenAddress]]
+    )
+  }
 }

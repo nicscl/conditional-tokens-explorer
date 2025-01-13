@@ -797,7 +797,7 @@ export const Contents = () => {
                         Balance: <span style={{ color: 'green' }}>{currencyPositions.yes.userBalanceERC1155WithDecimals}</span> (ERC1155)
                         {currencyPositions.yes.userBalanceERC20.gt(ZERO_BN) && currencyPositions.yes.wrappedTokenAddress && (
                           <span>
-                            {' '}+ <span style={{ color: 'blue' }}>{currencyPositions.yes.userBalanceERC20WithDecimals}</span> ({wrappedTokenInfo[currencyPositions.yes.wrappedTokenAddress]?.symbol || 'Loading...'})
+                            {' '}+ <span style={{ color: 'blue' }}>{currencyPositions.yes.userBalanceERC20WithDecimals}</span> ({quickMergeConfig.currencyPositions.yes.wrap.tokenSymbol})
                           </span>
                         )}
                         <div style={{ marginTop: '4px', color: 'red' }}>
@@ -836,7 +836,7 @@ export const Contents = () => {
                         Balance: <span style={{ color: 'green' }}>{currencyPositions.no.userBalanceERC1155WithDecimals}</span> (ERC1155)
                         {currencyPositions.no.userBalanceERC20.gt(ZERO_BN) && currencyPositions.no.wrappedTokenAddress && (
                           <span>
-                            {' '}+ <span style={{ color: 'blue' }}>{currencyPositions.no.userBalanceERC20WithDecimals}</span> ({wrappedTokenInfo[currencyPositions.no.wrappedTokenAddress]?.symbol || 'Loading...'})
+                            {' '}+ <span style={{ color: 'blue' }}>{currencyPositions.no.userBalanceERC20WithDecimals}</span> ({quickMergeConfig.currencyPositions.no.wrap.tokenSymbol})
                           </span>
                         )}
                         <div style={{ marginTop: '4px', color: 'red' }}>

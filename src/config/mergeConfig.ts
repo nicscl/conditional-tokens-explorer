@@ -48,11 +48,11 @@ export const quickMergeConfigs: { [networkId in NetworkIds]?: QuickMergeConfig[]
           }
         },
         no: {
-          positionId: '0xdaf5c3a4694b339c59f8f531be87a1820a8e334c83d5b5bdcd61e2b8074b08a7',
+          positionId: '0xb1e9b3f2b9b813669a81089ee9458ca9453b84f7228cce31e9404de3c33c216e',
           wrap: {
-            tokenName: 'Hello',
-            tokenSymbol: 'WM',
-            wrappedCollateralTokenAddress: '0x64ab9162ec35730d28aa1c67ea42634614977c2b'
+            tokenName: 'Wrapped ERC-1155',
+            tokenSymbol: 'FUTA_N',
+            wrappedCollateralTokenAddress: '0xb7a36a41a66c87ca12d08823740df71888d8d97a'
           }
         }
       },
