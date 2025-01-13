@@ -572,7 +572,7 @@ export const SpotMarket: React.FC = () => {
         {showSwap && (
           <SwapFrame
             ref={iframeRef}
-            src={`http://18.229.197.237:3002/iframe/swap?inputCurrency=ETH&outputCurrency=0x2995D1317DcD4f0aB89f4AE60F3f020A4F17C7CE&exactAmount=${amount}`}
+            src="http://18.229.197.237:3002/iframe/swap?inputCurrency=0x38eeff6a964ac441b900deb6bf25c85be85a32a0&outputCurrency=ETH&exactAmount=0.01"
             title="Sushiswap Widget"
             allow="clipboard-write; clipboard-read"
             sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
