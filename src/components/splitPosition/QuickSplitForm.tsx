@@ -61,10 +61,21 @@ export const QuickSplitForm: React.FC<Props> = ({ config }) => {
       if (status === Web3ContextStatus.Connected && activeAddress && walletAddress && CPKService) {
         setTransactionStatus(Remote.loading())
 
+        logger.info('QuickSplit starting split with:', {
+          amount: amount.toString(),
+          tokenAddress: config.tokenAddress,
+          conditionId: config.conditionId,
+          walletAddress,
+          activeAddress,
+          usingCPK: isUsingTheCPKAddress()
+        })
+
         // Create partition based on outcomes
         const partition = config.outcomes.map((_, index) => new BigNumber(1 << index))
+        logger.info('QuickSplit created partition:', partition.map(p => p.toString()))
 
         if (isUsingTheCPKAddress()) {
+          logger.info('QuickSplit using CPK service')
           await CPKService.splitPosition({
             CTService,
             address: walletAddress,
@@ -75,6 +86,7 @@ export const QuickSplitForm: React.FC<Props> = ({ config }) => {
             partition,
           })
         } else {
+          logger.info('QuickSplit using CT service directly')
           await CTService.splitPosition(
             config.tokenAddress,
             NULL_PARENT_ID,
@@ -91,13 +103,14 @@ export const QuickSplitForm: React.FC<Props> = ({ config }) => {
           config.tokenAddress,
           activeAddress
         )
+        logger.info('QuickSplit successful, position IDs:', positionIds)
 
         setTransactionStatus(Remote.success({ positionIds, collateral: config.tokenAddress }))
       } else if (status === Web3ContextStatus.Infura) {
         connect()
       }
     } catch (error) {
-      logger.error(error)
+      logger.error('QuickSplit failed:', error)
       setTransactionStatus(Remote.failure(error instanceof Error ? error : new Error(String(error))))
     }
   }, [
