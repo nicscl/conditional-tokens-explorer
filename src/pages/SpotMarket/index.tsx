@@ -427,11 +427,34 @@ export const SpotMarket: React.FC = () => {
         throw new Error('Invalid positions returned from split')
       }
 
-      // NO is position[1], YES is position[0] - matching merge config
-      const positionIds = {
-        yes: positions[0].positionId,
-        no: positions[1].positionId
-      }
+      // Flag to control position reversal in buy mode
+      const buyModeReversePosition = true
+
+      // Determine position assignments based on side and reversal flag
+      const positionIds = side === 'buy' && buyModeReversePosition
+        ? {
+            // For buy mode with reversal: position[0] = NO, position[1] = YES
+            yes: positions[1].positionId,
+            no: positions[0].positionId
+          }
+        : {
+            // For sell mode or buy without reversal: position[0] = YES, position[1] = NO
+            yes: positions[0].positionId,
+            no: positions[1].positionId
+          }
+
+      logger.info('Position assignment:', {
+        side,
+        buyModeReversePosition,
+        positions: {
+          position0: positions[0].positionId,
+          position1: positions[1].positionId
+        },
+        assigned: {
+          yes: positionIds.yes,
+          no: positionIds.no
+        }
+      })
 
       // Get the wrap config based on outcome AND side
       const wrapConfig = side === 'sell' 
