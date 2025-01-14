@@ -44,6 +44,24 @@ export const quickMergeConfigs: { [networkId in NetworkIds]?: QuickMergeConfig[]
           wrap: {
             tokenName: 'Wrapped ERC-1155',
             tokenSymbol: 'WXDAI_Y',
+            wrappedCollateralTokenAddress: '0x0be6c1fe39625742e143d6ea6d7cb79bf54c163b'
+          }
+        },
+        no: {
+          positionId: '0xb1e9b3f2b9b813669a81089ee9458ca9453b84f7228cce31e9404de3c33c216e',
+          wrap: {
+            tokenName: 'Wrapped ERC-1155',
+            tokenSymbol: 'WXDAI_N',
+            wrappedCollateralTokenAddress: '0xca1b610382b8754b4ead5a40ceed77b7b318aa75'
+          }
+        }
+      },
+      companyPositions: {
+        yes: {
+          positionId: '0xfe0db6706f454cf243baafd54e8234e675536fa2210226f44d52aa6bee70f2d0',
+          wrap: {
+            tokenName: 'Wrapped ERC-1155',
+            tokenSymbol: 'FUTA_Y',
             wrappedCollateralTokenAddress: '0x38eeff6a964ac441b900deb6bf25c85be85a32a0'
           }
         },
