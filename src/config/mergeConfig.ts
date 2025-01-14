@@ -36,7 +36,7 @@ export interface QuickMergeConfig {
 export const quickMergeConfigs: { [networkId in NetworkIds]?: QuickMergeConfig[] } = {
   [NetworkIds.XDAI]: [
     {
-      conditionId: '0x88853266a44451ff9fc0b8ccdfbb7f61cb1897a27ba8e0136317ff8d99e163db',
+      conditionId: '0x4fc480a936b2a7e9c827276673c5801990dd24db73b47c9c193758d1e4441a53',
       tokenAddress: '0xe91D153E0b41518A2Ce8Dd3D7944Fa863463a97d', // WXDAI
       currencyPositions: {
         yes: {

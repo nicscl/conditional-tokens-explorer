@@ -148,7 +148,7 @@ export const Contents = () => {
     if (mode === 'quick') {
       if (currencyPositions.yes && currencyPositions.no) {
         // Set the positions that will be merged for currency
-        setSelectedPositions([currencyPositions.yes, currencyPositions.no])
+      setSelectedPositions([currencyPositions.yes, currencyPositions.no])
       } else if (companyPositions.yes && companyPositions.no) {
         // Set the positions that will be merged for company
         setSelectedPositions([companyPositions.yes, companyPositions.no])
@@ -421,36 +421,36 @@ export const Contents = () => {
           
           if (isPositionsObject(positions)) {
             const { yes, no } = positions
-            // Handle YES position wrapping if needed
+          // Handle YES position wrapping if needed
             if (yes && yes.userBalanceERC1155.lt(mergeAmount)) {
               const amountToWrap = mergeAmount.sub(yes.userBalanceERC1155)
               if (amountToWrap.gt(ZERO_BN) && yes.wrappedTokenAddress) {
                 logger.info(`Wrapping YES ${positionType} position tokens:`, amountToWrap.toString())
-                await CTService.safeTransferFrom(
-                  walletAddress,
+              await CTService.safeTransferFrom(
+                walletAddress,
                   yes.wrappedTokenAddress,
                   yes.id,
-                  amountToWrap,
-                  ethers.utils.defaultAbiCoder.encode(
-                    ['string', 'bytes32'],
+                amountToWrap,
+                ethers.utils.defaultAbiCoder.encode(
+                  ['string', 'bytes32'],
                     ['Wrapped ERC-1155', ethers.utils.id(positionType === 'currency' ? 'WXDAI_Y' : 'FUTA_Y')]
-                  )
                 )
-              }
+              )
             }
+          }
 
-            // Handle NO position wrapping if needed
+          // Handle NO position wrapping if needed
             if (no && no.userBalanceERC1155.lt(mergeAmount)) {
               const amountToWrap = mergeAmount.sub(no.userBalanceERC1155)
               if (amountToWrap.gt(ZERO_BN) && no.wrappedTokenAddress) {
                 logger.info(`Wrapping NO ${positionType} position tokens:`, amountToWrap.toString())
-                await CTService.safeTransferFrom(
-                  walletAddress,
+              await CTService.safeTransferFrom(
+                walletAddress,
                   no.wrappedTokenAddress,
                   no.id,
-                  amountToWrap,
-                  ethers.utils.defaultAbiCoder.encode(
-                    ['string', 'bytes32'],
+                amountToWrap,
+                ethers.utils.defaultAbiCoder.encode(
+                  ['string', 'bytes32'],
                     ['Wrapped ERC-1155', ethers.utils.id(positionType === 'currency' ? 'WXDAI_N' : 'FUTA_N')]
                   )
                 )
@@ -503,7 +503,16 @@ export const Contents = () => {
 
         const { collateralToken: posCollateralToken, conditionIds, indexSets } = positionsToMerge[0]
         
-        // Continue with merge logic...
+        logger.info('Merge positions data:', {
+          positionsToMerge: positionsToMerge.map(p => ({
+            id: p.id,
+            conditionIds: p.conditionIds,
+            indexSets: p.indexSets
+          })),
+          conditionId: quickMergeConfig.conditionId
+        })
+
+        // Calculate parent collection ID
         const newCollectionsSet = conditionIds.reduce<Array<{ conditionId: string; indexSet: BigNumber }>>(
           (acc, id, i) =>
             id !== quickMergeConfig.conditionId
@@ -515,17 +524,65 @@ export const Contents = () => {
           ? ConditionalTokensService.getCombinedCollectionId(newCollectionsSet)
           : NULL_PARENT_ID
 
-        const partition = positionsToMerge.map(
-          ({ conditionIds, indexSets }) =>
-            indexSets[conditionIds.findIndex((id) => quickMergeConfig.conditionId === id)]
-        )
+        // Create partition array with validation
+        const partition = positionsToMerge.map(({ conditionIds, indexSets }) => {
+          const conditionIndex = conditionIds.findIndex(id => id === quickMergeConfig.conditionId)
+          if (conditionIndex === -1) {
+            logger.error('Condition not found in position:', {
+              positionConditionIds: conditionIds,
+              targetConditionId: quickMergeConfig.conditionId
+            })
+            throw new Error('Position does not contain the target condition')
+          }
+
+          const indexSet = indexSets[conditionIndex]
+          if (!indexSet) {
+            logger.error('Index set not found for condition:', {
+              conditionIndex,
+              indexSets,
+              conditionId: quickMergeConfig.conditionId
+            })
+            throw new Error('Index set not found for condition')
+          }
+
+          return indexSet
+        })
+
+        logger.info('Created partition:', {
+          partition,
+          conditionId: quickMergeConfig.conditionId
+        })
+
+        // Validate partition before converting to BigNumber
+        if (!partition.every(Boolean)) {
+          logger.error('Invalid partition data:', { partition })
+          throw new Error('Invalid partition data: some values are undefined')
+        }
+
+        const partitionBN: BigNumber[] = partition.map((indexSet) => {
+          if (!indexSet) {
+            throw new Error('Unexpected undefined index set')
+          }
+          return new BigNumber(indexSet)
+        })
+
+        if (partitionBN.length !== 2) {
+          throw new Error(`Expected 2 positions to merge, got ${partitionBN.length}`)
+        }
+
+        logger.info('Final merge parameters:', {
+          partition: partitionBN.map(bn => bn.toString()),
+          conditionId: quickMergeConfig.conditionId,
+          parentCollectionId,
+          posCollateralToken,
+          mergeAmount: mergeAmount.toString()
+        })
+
         const shouldTransferAmount = isConditionFullIndexSet(
           positionsToMerge,
           quickMergeConfig.conditionId,
           condition.outcomeSlotCount
         )
-
-        const partitionBN: BigNumber[] = partition.map((o: string) => new BigNumber(o))
 
         if (isUsingTheCPKAddress()) {
           await CPKService.mergePositions({
@@ -548,7 +605,7 @@ export const Contents = () => {
           )
         }
 
-        setMergeResult(
+            setMergeResult(
           parentCollectionId === NULL_PARENT_ID
             ? posCollateralToken
             : ConditionalTokensService.getPositionId(posCollateralToken, parentCollectionId)
@@ -663,14 +720,14 @@ export const Contents = () => {
       return 'No mergeable currency positions found for this condition'
     }
 
-    if (currencyPositions.yes.userBalanceERC1155.add(currencyPositions.yes.userBalanceERC20).isZero() || 
-        currencyPositions.no.userBalanceERC1155.add(currencyPositions.no.userBalanceERC20).isZero()) {
+      if (currencyPositions.yes.userBalanceERC1155.add(currencyPositions.yes.userBalanceERC20).isZero() || 
+          currencyPositions.no.userBalanceERC1155.add(currencyPositions.no.userBalanceERC20).isZero()) {
       return 'Insufficient total balance (ERC1155 + ERC20) to merge currency positions'
-    }
+      }
 
     if (currencyAmount.gt(maxCurrencyBalance)) {
       return `Amount exceeds maximum available balance of ${ethers.utils.formatUnits(maxCurrencyBalance, decimals)}`
-    }
+      }
 
     return null
   }, [currencyPositions, currencyAmount, maxCurrencyBalance, decimals])
@@ -1237,7 +1294,7 @@ export const Contents = () => {
                           {getCurrencyUnwrapSteps()?.map((step, index) => (
                             <div key={index} style={{ marginLeft: '20px', marginTop: '4px' }}>
                               {index + 1}. Use the <strong>Unwrap</strong> button above in the {step.type} position section to unwrap {ethers.utils.formatUnits(step.amount, decimals)} {step.symbol}
-                            </div>
+                              </div>
                           ))}
                         </div>
                       </WarningMessage>
@@ -1364,16 +1421,16 @@ export const Contents = () => {
                           onUseWalletBalance={onCompanyUseBalance}
                         />
                         {needsCompanyWrapping && (
-                          <WarningMessage status={StatusInfoType.warning}>
-                            <div>
+                      <WarningMessage status={StatusInfoType.warning}>
+                        <div>
                               <div>This merge requires unwrapping tokens first. Required steps:</div>
                               {getCompanyUnwrapSteps()?.map((step, index) => (
-                                <div key={index} style={{ marginLeft: '20px', marginTop: '4px' }}>
-                                  {index + 1}. Use the <strong>Unwrap</strong> button above in the {step.type} position section to unwrap {ethers.utils.formatUnits(step.amount, decimals)} {step.symbol}
-                                </div>
-                              ))}
+                            <div key={index} style={{ marginLeft: '20px', marginTop: '4px' }}>
+                              {index + 1}. Use the <strong>Unwrap</strong> button above in the {step.type} position section to unwrap {ethers.utils.formatUnits(step.amount, decimals)} {step.symbol}
                             </div>
-                          </WarningMessage>
+                          ))}
+                        </div>
+                      </WarningMessage>
                         )}
                       </div>
                     </Row>
@@ -1384,27 +1441,27 @@ export const Contents = () => {
                     )}
                     <ButtonContainer>
                       {needsCompanyWrapping ? (
-                        <Button 
-                          disabled={true}
-                          buttonType={ButtonType.primary}
-                        >
+                      <Button 
+                        disabled={true}
+                        buttonType={ButtonType.primary}
+                      >
                           Merge Company Positions (Unwrap Required)
-                        </Button>
-                      ) : (
-                        <Button 
+                      </Button>
+                  ) : (
+                    <Button 
                           disabled={disabledCompany} 
                           onClick={(e) => onMerge('company')}
-                          buttonType={ButtonType.primary}
-                        >
+                      buttonType={ButtonType.primary}
+                    >
                           Merge Company Positions
-                        </Button>
-                      )}
-                    </ButtonContainer>
+                    </Button>
+                  )}
+                </ButtonContainer>
                   </>
                 ) : (
-                  <StatusInfoInline status={StatusInfoType.warning}>
+                <StatusInfoInline status={StatusInfoType.warning}>
                     No company token positions configured for this network
-                  </StatusInfoInline>
+                </StatusInfoInline>
                 )}
                 {/* Currency section merge result */}
                 {renderMergeResultModal()}
@@ -1419,9 +1476,9 @@ export const Contents = () => {
           </CenteredCard>
         )
       ) : (
-        <CenteredCard>
-          <SelectablePositionTable
-            onFilterCallback={onFilterCallback}
+    <CenteredCard>
+      <SelectablePositionTable
+        onFilterCallback={onFilterCallback}
             onRowClicked={async (selectedPosition: PositionWithUserBalanceWithDecimals) => {
               setPosition(selectedPosition)
               if (!positions) return
@@ -1445,12 +1502,12 @@ export const Contents = () => {
                 setConditionId(selectedPosition.conditions[0].conditionId)
               }
             }}
-            selectedPosition={position}
-          />
+        selectedPosition={position}
+      />
           {position && (
             <>
-              <Row>
-                <MergeWith
+      <Row>
+        <MergeWith
                   errorFetching={false}
                   isLoading={false}
                   mergeablePositions={advancedMergeablePositions.map(position => ({
@@ -1466,29 +1523,29 @@ export const Contents = () => {
                       )
                     }
                   }}
-                />
-              </Row>
+        />
+      </Row>
               <Row>
-                <ConditionsDropdown
+        <ConditionsDropdown
                   conditions={position.conditions.map((c) => c.conditionId)}
                   onClick={setConditionId}
-                  value={conditionId}
-                />
-              </Row>
-              <Row>
+          value={conditionId}
+        />
+      </Row>
+        <Row>
                 <div>
                   <div style={{ marginBottom: '8px', fontSize: '12px', color: 'gray' }}>
                     Max amount includes both unwrapped (ERC1155) and wrapped (ERC20) tokens. If needed, tokens will be automatically unwrapped before merging.
                   </div>
-                  <Amount
+        <Amount
                     amount={advancedAmount}
-                    balance={maxBalance}
-                    decimals={decimals}
+          balance={maxBalance}
+          decimals={decimals}
                     isFromAPosition
-                    max={maxBalance.toString()}
+          max={maxBalance.toString()}
                     onAmountChange={onAdvancedAmountChange}
                     onUseWalletBalance={onAdvancedUseBalance}
-                  />
+        />
                   {advancedNeedsWrapping && (
                     <WarningMessage status={StatusInfoType.warning}>
                       <div>
@@ -1502,29 +1559,29 @@ export const Contents = () => {
                     </WarningMessage>
                   )}
                 </div>
-              </Row>
+      </Row>
               {selectedPositions.length > 0 && conditionId && (
                 <Row>
-                  <MergePreview
+        <MergePreview
                     amount={advancedAmount}
-                    condition={condition}
-                    positions={selectedPositions}
-                    token={collateralToken}
-                  />
-                </Row>
-              )}
-              <ButtonContainer>
+          condition={condition}
+          positions={selectedPositions}
+          token={collateralToken}
+        />
+      </Row>
+      )}
+      <ButtonContainer>
                 <Button
                   disabled={disabledAdvanced}
                   onClick={(e) => onMerge('advanced')}
                 >
                   {advancedNeedsWrapping ? 'Unwrap & Merge Positions' : 'Merge Positions'}
-                </Button>
-              </ButtonContainer>
+        </Button>
+      </ButtonContainer>
             </>
           )}
           {renderMergeResultModal()}
-        </CenteredCard>
+    </CenteredCard>
       )}
     </>
   )
