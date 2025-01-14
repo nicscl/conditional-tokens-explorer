@@ -10,6 +10,7 @@ import { NetworkIds } from 'util/types'
 import { quickMergeConfigs } from 'config/mergeConfig'
 import { NULL_PARENT_ID, ZERO_BN } from 'config/constants'
 import { quickSplitConfigs } from 'config/splitConfig'
+import { spotMarketConfigs } from 'config/spotMarketConfig'
 import { useCollateral } from 'hooks/useCollateral'
 import { ERC20Service } from 'services/erc20'
 import { formatBigNumber } from 'util/tools'
@@ -294,10 +295,14 @@ export const SpotMarket: React.FC = () => {
 
   // Get the split config for the current network
   const config = quickSplitConfigs[networkConfig?.networkId as NetworkIds]?.[0]
-  const { collateral } = useCollateral(config?.tokenAddress)
+  const spotConfig = spotMarketConfigs[networkConfig?.networkId as NetworkIds]?.[0]
+  
+  // Use FAOT token address for sell mode, WXDAI for buy mode
+  const tokenAddress = (side === 'sell' ? spotConfig?.companyToken.address : config?.tokenAddress) || ''
+  const { collateral } = useCollateral(tokenAddress)
 
   // Add allowance handling
-  const allowanceMethods = useAllowance(config?.tokenAddress)
+  const allowanceMethods = useAllowance(tokenAddress)
   const {
     allowanceError,
     allowanceFinished,
@@ -310,24 +315,26 @@ export const SpotMarket: React.FC = () => {
   // Fetch wallet balance
   useEffect(() => {
     const fetchBalance = async () => {
-      if (status === Web3ContextStatus.Connected && config?.tokenAddress && walletAddress && signer) {
-        const erc20Service = new ERC20Service(provider, config.tokenAddress, signer)
+      if (status === Web3ContextStatus.Connected && tokenAddress && walletAddress && signer) {
+        const erc20Service = new ERC20Service(provider, tokenAddress, signer)
         const balance = await erc20Service.balanceOf(walletAddress)
         logger.info('Wallet balance updated:', {
           balance: balance.toString(),
-          formatted: collateral ? formatBigNumber(balance, collateral.decimals) : 'no collateral'
+          formatted: collateral ? formatBigNumber(balance, collateral.decimals) : 'no collateral',
+          token: side === 'sell' ? 'FAOT' : 'WXDAI'
         })
         setWalletBalance(balance)
       }
     }
     fetchBalance()
-  }, [status, config?.tokenAddress, walletAddress, signer, provider, collateral])
+  }, [status, tokenAddress, walletAddress, signer, provider, collateral, side])
 
   const handleSplit = async () => {
     try {
       logger.info('Starting split process with inputs:', {
         outcome,
         amount,
+        side,
         walletAddress,
         hasServices: {
           CTService: !!CTService,
@@ -366,16 +373,17 @@ export const SpotMarket: React.FC = () => {
         },
         partition: partition.map(p => p.toString()),
         config: {
-          tokenAddress: config.tokenAddress,
+          tokenAddress: tokenAddress, // Use the dynamic token address
           conditionId: config.conditionId,
-          collateralSymbol: collateral.symbol
+          collateralSymbol: collateral.symbol,
+          side
         }
       })
 
       // Execute split transaction
       logger.info('Executing split transaction...')
       await CTService.splitPosition(
-        config.tokenAddress,
+        tokenAddress, // Use the dynamic token address
         NULL_PARENT_ID,
         config.conditionId,
         partition,
@@ -389,7 +397,7 @@ export const SpotMarket: React.FC = () => {
         partition,
         NULL_PARENT_ID,
         config.conditionId,
-        config.tokenAddress,
+        tokenAddress, // Use the dynamic token address
         walletAddress
       )
 
@@ -424,35 +432,42 @@ export const SpotMarket: React.FC = () => {
         yes: positions[1].positionId,
         no: positions[0].positionId
       }
+
+      // Get the wrap config based on outcome AND side
+      const wrapConfig = side === 'sell' 
+        ? (outcome === 'approval' 
+            ? quickMergeConfig.companyPositions?.yes.wrap
+            : quickMergeConfig.companyPositions?.no.wrap)
+        : (outcome === 'approval'
+            ? quickMergeConfig.currencyPositions.yes.wrap
+            : quickMergeConfig.currencyPositions.no.wrap)
+
+      if (!wrapConfig) {
+        throw new Error('Wrap config not available')
+      }
+
       logger.info('Position IDs after split:', {
         yes: positionIds.yes,
         no: positionIds.no,
-        yesType: typeof positionIds.yes,
-        noType: typeof positionIds.no,
-        expectedYesId: quickMergeConfig.currencyPositions.yes.positionId,
-        expectedNoId: quickMergeConfig.currencyPositions.no.positionId
+        side,
+        outcome,
+        wrapConfig
       })
-
-      // Get the wrap config based on outcome
-      const wrapConfig = outcome === 'approval' 
-        ? quickMergeConfig.currencyPositions.yes.wrap
-        : quickMergeConfig.currencyPositions.no.wrap
-
-      const selectedPositionId = outcome === 'approval' ? positionIds.yes : positionIds.no
 
       logger.info('Split completed successfully')
       setTransactionStatus(Remote.success({ positionIds }))
       setShowConfirmation(true)
     } catch (error) {
+      const err = error as any // Type assertion here instead
       logger.error('Split process failed:', {
-        error,
-        message: error instanceof Error ? error.message : JSON.stringify(error),
-        data: error?.data,
-        code: error?.code,
-        stack: error instanceof Error ? error.stack : undefined
+        error: err,
+        message: err instanceof Error ? err.message : JSON.stringify(err),
+        data: err?.data,
+        code: err?.code,
+        stack: err instanceof Error ? err.stack : undefined
       })
-      const errorMessage = error instanceof Error ? error.message : 
-        (error?.data?.message || error?.message || JSON.stringify(error))
+      const errorMessage = err instanceof Error ? err.message : 
+        (err?.data?.message || err?.message || JSON.stringify(err))
       setTransactionStatus(Remote.failure(new Error(errorMessage)))
     }
   }
@@ -485,9 +500,19 @@ export const SpotMarket: React.FC = () => {
       if (!data || !config || !collateral || !WrapperService || !walletAddress) return
 
       const positionId = outcome === 'approval' ? data.positionIds.yes : data.positionIds.no
-      const wrapConfig = outcome === 'approval' 
-        ? config.currencyPositions.yes.wrap 
-        : config.currencyPositions.no.wrap
+      
+      // Get wrap config based on side (FAOT or WXDAI)
+      const wrapConfig = side === 'sell' 
+        ? (outcome === 'approval' 
+            ? config.companyPositions?.yes.wrap
+            : config.companyPositions?.no.wrap)
+        : (outcome === 'approval'
+            ? config.currencyPositions.yes.wrap
+            : config.currencyPositions.no.wrap)
+
+      if (!wrapConfig) {
+        throw new Error('Wrap config not available')
+      }
 
       const amountBN = ethers.utils.parseUnits(amount, collateral.decimals)
       const tokenBytes = getTokenBytecode(
@@ -503,6 +528,14 @@ export const SpotMarket: React.FC = () => {
         positionId,
         tokenBytes,
       }
+
+      logger.info('Wrapping with config:', {
+        side,
+        outcome,
+        wrapConfig,
+        positionId,
+        amount: amountBN.toString()
+      })
 
       await CTService?.safeTransferFrom(
         walletAddress,

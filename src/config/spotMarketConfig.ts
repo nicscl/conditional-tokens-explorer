@@ -11,6 +11,9 @@ export interface SpotMarketConfig {
     yes: string
     no: string
   }
+  companyToken: {
+    address: string // FAOT address
+  }
   description: string
 }
 
@@ -26,6 +29,9 @@ export const spotMarketConfigs: { [networkId in NetworkIds]?: SpotMarketConfig[]
       wrappedPositions: {
         yes: '0x1234567890123456789012345678901234567890', // Replace with actual wrapped token addresses
         no: '0x0987654321098765432109876543210987654321'
+      },
+      companyToken: {
+        address: '0x81f41228357d9F17fA04bCF712905543127bE821' // FAOT token address
       },
       description: 'Currency Token (WXDAI) YES/NO Positions'
     }

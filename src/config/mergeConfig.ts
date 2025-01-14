@@ -60,17 +60,17 @@ export const quickMergeConfigs: { [networkId in NetworkIds]?: QuickMergeConfig[]
         yes: {
           positionId: '0x2ebc7de49d8ec2aca79a2b9121d2a8a15cded64a34354cfc7ed3dd57e254a90a',
           wrap: {
-            tokenName: 'Wrapped ERC-1155',
-            tokenSymbol: 'FUTA_Y',
-            wrappedCollateralTokenAddress: '0x38eeff6a964ac441b900deb6bf25c85be85a32a0'
+            tokenName: 'FAOT_Y0001',
+            tokenSymbol: 'FAOT_Y0001',
+            wrappedCollateralTokenAddress: '0xbdb45c49fa8b792d33839281ca6a493b371b5df5'
           }
         },
         no: {
           positionId: '0x506953f395ad09099f1e17c78dce0bb461bba439718ac90656e084eb03faceb5',
           wrap: {
-            tokenName: 'Wrapped ERC-1155',
-            tokenSymbol: 'FUTA_N',
-            wrappedCollateralTokenAddress: '0xb7a36a41a66c87ca12d08823740df71888d8d97a'
+            tokenName: 'FAOT_N0001',
+            tokenSymbol: 'FAOT_N0001',
+            wrappedCollateralTokenAddress: '0x26ad330dbcaefea13ce050f5e630accaf486ea75'
           }
         }
       },
