@@ -427,10 +427,10 @@ export const SpotMarket: React.FC = () => {
         throw new Error('Invalid positions returned from split')
       }
 
-      // YES is position[1], NO is position[0]
+      // NO is position[1], YES is position[0] - matching merge config
       const positionIds = {
-        yes: positions[1].positionId,
-        no: positions[0].positionId
+        yes: positions[0].positionId,
+        no: positions[1].positionId
       }
 
       // Get the wrap config based on outcome AND side
@@ -499,20 +499,39 @@ export const SpotMarket: React.FC = () => {
       const config = quickMergeConfigs[networkConfig?.networkId as NetworkIds]?.[0]
       if (!data || !config || !collateral || !WrapperService || !walletAddress) return
 
+      // Use position IDs from split result
       const positionId = outcome === 'approval' ? data.positionIds.yes : data.positionIds.no
       
-      // Get wrap config based on side (FAOT or WXDAI)
+      logger.info('Wrap config selection:', {
+        side,
+        outcome,
+        positionId,
+        splitPositions: data.positionIds,
+        companyPositions: {
+          yes: config.companyPositions?.yes.positionId,
+          no: config.companyPositions?.no.positionId
+        }
+      })
+
+      // Get wrap config based on side and outcome
       const wrapConfig = side === 'sell' 
-        ? (outcome === 'approval' 
-            ? config.companyPositions?.yes.wrap
-            : config.companyPositions?.no.wrap)
+        ? (outcome === 'approval'
+            ? config.companyPositions?.yes.wrap  // SELL + Pass -> Company YES
+            : config.companyPositions?.no.wrap)  // SELL + Fail -> Company NO
         : (outcome === 'approval'
-            ? config.currencyPositions.yes.wrap
-            : config.currencyPositions.no.wrap)
+            ? config.currencyPositions.yes.wrap  // BUY + Pass -> Currency YES
+            : config.currencyPositions.no.wrap)  // BUY + Fail -> Currency NO
 
       if (!wrapConfig) {
         throw new Error('Wrap config not available')
       }
+
+      logger.info('Selected wrap config:', {
+        side: side === 'sell' ? 'SELL (FAOT)' : 'BUY (WXDAI)',
+        outcome: outcome === 'approval' ? 'PASS (YES)' : 'FAIL (NO)',
+        positionId,
+        selectedConfig: wrapConfig
+      })
 
       const amountBN = ethers.utils.parseUnits(amount, collateral.decimals)
       const tokenBytes = getTokenBytecode(
@@ -529,12 +548,14 @@ export const SpotMarket: React.FC = () => {
         tokenBytes,
       }
 
-      logger.info('Wrapping with config:', {
-        side,
-        outcome,
-        wrapConfig,
-        positionId,
-        amount: amountBN.toString()
+      logger.info('Executing wrap with values:', {
+        from: walletAddress,
+        to: wrapValues.address,
+        positionId: positionId,
+        amount: formatBigNumber(amountBN, collateral.decimals),
+        tokenName: wrapConfig.tokenName,
+        tokenSymbol: wrapConfig.tokenSymbol,
+        wrappedAddress: wrapConfig.wrappedCollateralTokenAddress
       })
 
       await CTService?.safeTransferFrom(
