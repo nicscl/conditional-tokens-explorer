@@ -15,11 +15,16 @@ import { ERC20Service } from 'services/erc20'
 import { formatBigNumber } from 'util/tools'
 import { Button } from 'components/buttons'
 import { ButtonContainer } from 'components/pureStyledComponents/ButtonContainer'
+import { useAllowance } from 'hooks/useAllowance'
+import { useAllowanceState } from 'hooks/useAllowanceState'
+import { SetAllowance } from 'components/common/SetAllowance'
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { getTokenBytecode } = require('1155-to-20-helper/src')
 
 const logger = getLogger('SpotMarket')
+
+const DEBUG_MODE = true // You can toggle this to false to hide debug info
 
 const Container = styled.div`
   padding: 20px;
@@ -121,6 +126,15 @@ const SwapFrame = styled.iframe`
   height: 640px;
   border-radius: 8px;
   margin-top: 20px;
+`
+
+const DebugInfo = styled.div`
+  margin: 8px 0;
+  padding: 8px;
+  background: #f5f5f5;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 12px;
 `
 
 interface Balances {
@@ -282,6 +296,17 @@ export const SpotMarket: React.FC = () => {
   const config = quickSplitConfigs[networkConfig?.networkId as NetworkIds]?.[0]
   const { collateral } = useCollateral(config?.tokenAddress)
 
+  // Add allowance handling
+  const allowanceMethods = useAllowance(config?.tokenAddress)
+  const {
+    allowanceError,
+    allowanceFinished,
+    cleanAllowanceError,
+    fetchingAllowance,
+    shouldDisplayAllowance,
+    unlockCollateral,
+  } = useAllowanceState(allowanceMethods, amount ? ethers.utils.parseUnits(amount, collateral?.decimals || 18) : ZERO_BN)
+
   // Fetch wallet balance
   useEffect(() => {
     const fetchBalance = async () => {
@@ -320,6 +345,11 @@ export const SpotMarket: React.FC = () => {
         }
         logger.error('Required services or config not available:', error)
         throw new Error('Required services or config not available')
+      }
+
+      if (!allowanceFinished && shouldDisplayAllowance) {
+        logger.error('Token approval required')
+        throw new Error('Token approval required')
       }
 
       // Create partition based on outcomes (YES/NO)
@@ -442,10 +472,11 @@ export const SpotMarket: React.FC = () => {
   const isDisabled = React.useMemo(() => {
     if (!amount || Number(amount) <= 0) return true
     if (!collateral) return false
+    if (!allowanceFinished && shouldDisplayAllowance) return true
     // Convert amount to same format as walletBalance (with proper decimals)
     const amountBN = ethers.utils.parseUnits(amount, collateral.decimals)
     return amountBN.gt(walletBalance)
-  }, [amount, collateral, walletBalance])
+  }, [amount, collateral, walletBalance, allowanceFinished, shouldDisplayAllowance])
 
   const handleWrap = async () => {
     try {
@@ -496,6 +527,13 @@ export const SpotMarket: React.FC = () => {
       <SpotMarketCard>
         <Title>Spot Market</Title>
         
+        {DEBUG_MODE && (
+          <DebugInfo>
+            Token Approval Status: {allowanceFinished ? '✅ Approved' : '❌ Not Approved'}
+            {shouldDisplayAllowance && ' (Approval Required)'}
+          </DebugInfo>
+        )}
+        
         <BuySellTabs>
           <Tab active={side === 'buy'} onClick={() => setSide('buy')}>Buy</Tab>
           <Tab active={side === 'sell'} isSell onClick={() => setSide('sell')}>Sell</Tab>
@@ -543,6 +581,16 @@ export const SpotMarket: React.FC = () => {
           <div className="text-sm text-gray-500 mb-4">
             Balance: {formatBigNumber(walletBalance, collateral.decimals)} {collateral.symbol}
           </div>
+        )}
+
+        {shouldDisplayAllowance && collateral && (
+          <SetAllowance
+            collateral={collateral}
+            error={allowanceError}
+            fetching={fetchingAllowance}
+            finished={allowanceFinished}
+            onUnlock={unlockCollateral}
+          />
         )}
 
         {transactionStatus.isFailure() && (

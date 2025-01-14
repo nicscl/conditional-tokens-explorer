@@ -43,7 +43,7 @@ export const quickMergeConfigs: { [networkId in NetworkIds]?: QuickMergeConfig[]
           positionId: '0xfe0db6706f454cf243baafd54e8234e675536fa2210226f44d52aa6bee70f2d0',
           wrap: {
             tokenName: 'Wrapped ERC-1155',
-            tokenSymbol: 'FUTA_Y',
+            tokenSymbol: 'WXDAI_Y',
             wrappedCollateralTokenAddress: '0x38eeff6a964ac441b900deb6bf25c85be85a32a0'
           }
         },
