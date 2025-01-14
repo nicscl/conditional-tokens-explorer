@@ -40,7 +40,7 @@ export const quickMergeConfigs: { [networkId in NetworkIds]?: QuickMergeConfig[]
       tokenAddress: '0xe91D153E0b41518A2Ce8Dd3D7944Fa863463a97d', // WXDAI
       currencyPositions: {
         yes: {
-          positionId: '0xdf050dceffd770611637625a7f9ebd5d64ee5d243a25774d0f31ef8661d5d036',
+          positionId: '0xfe0db6706f454cf243baafd54e8234e675536fa2210226f44d52aa6bee70f2d0',
           wrap: {
             tokenName: 'Wrapped ERC-1155',
             tokenSymbol: 'WXDAI_Y',
@@ -48,7 +48,7 @@ export const quickMergeConfigs: { [networkId in NetworkIds]?: QuickMergeConfig[]
           }
         },
         no: {
-          positionId: '0xdaf5c3a4694b339c59f8f531be87a1820a8e334c83d5b5bdcd61e2b8074b08a7',
+          positionId: '0xb1e9b3f2b9b813669a81089ee9458ca9453b84f7228cce31e9404de3c33c216e',
           wrap: {
             tokenName: 'Wrapped ERC-1155',
             tokenSymbol: 'WXDAI_N',
@@ -58,7 +58,7 @@ export const quickMergeConfigs: { [networkId in NetworkIds]?: QuickMergeConfig[]
       },
       companyPositions: {
         yes: {
-          positionId: '0xfe0db6706f454cf243baafd54e8234e675536fa2210226f44d52aa6bee70f2d0',
+          positionId: '0x2ebc7de49d8ec2aca79a2b9121d2a8a15cded64a34354cfc7ed3dd57e254a90a',
           wrap: {
             tokenName: 'Wrapped ERC-1155',
             tokenSymbol: 'FUTA_Y',
@@ -66,7 +66,7 @@ export const quickMergeConfigs: { [networkId in NetworkIds]?: QuickMergeConfig[]
           }
         },
         no: {
-          positionId: '0xb1e9b3f2b9b813669a81089ee9458ca9453b84f7228cce31e9404de3c33c216e',
+          positionId: '0x506953f395ad09099f1e17c78dce0bb461bba439718ac90656e084eb03faceb5',
           wrap: {
             tokenName: 'Wrapped ERC-1155',
             tokenSymbol: 'FUTA_N',
