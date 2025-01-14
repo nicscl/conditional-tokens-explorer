@@ -102,7 +102,10 @@ export const Contents = () => {
     Remote.notAsked<Maybe<BigNumber>>()
   )
 
-  const [amount, setAmount] = useState<BigNumber>(ZERO_BN)
+  const [currencyAmount, setCurrencyAmount] = useState<BigNumber>(ZERO_BN)
+  const [companyAmount, setCompanyAmount] = useState<BigNumber>(ZERO_BN)
+  const [advancedAmount, setAdvancedAmount] = useState<BigNumber>(ZERO_BN)
+
   const [collateralToken, setCollateralToken] = useState<Maybe<Token>>(null)
   const [mergeResult, setMergeResult] = useState<string>('')
   const [wrappedTokenInfo, setWrappedTokenInfo] = useState<{ [address: string]: Token }>({})
@@ -129,20 +132,36 @@ export const Contents = () => {
     return { yes: yesPosition || null, no: noPosition || null }
   }, [positions, quickMergeConfig])
 
+  // Find mergeable positions for company token
+  const companyPositions = useMemo(() => {
+    if (!positions || !quickMergeConfig?.companyPositions) return { yes: null, no: null }
+    
+    const config = quickMergeConfig.companyPositions
+    const yesPosition = positions.find(p => p.id === config?.yes?.positionId)
+    const noPosition = positions.find(p => p.id === config?.no?.positionId)
+    
+    return { yes: yesPosition || null, no: noPosition || null }
+  }, [positions, quickMergeConfig])
+
   // Set mergeable positions for quick mode
   useEffect(() => {
-    if (mode === 'quick' && currencyPositions.yes && currencyPositions.no) {
-      // Set the positions that will be merged
-      setSelectedPositions([currencyPositions.yes, currencyPositions.no])
+    if (mode === 'quick') {
+      if (currencyPositions.yes && currencyPositions.no) {
+        // Set the positions that will be merged for currency
+        setSelectedPositions([currencyPositions.yes, currencyPositions.no])
+      } else if (companyPositions.yes && companyPositions.no) {
+        // Set the positions that will be merged for company
+        setSelectedPositions([companyPositions.yes, companyPositions.no])
+      }
       // Set the condition ID
       if (quickMergeConfig) {
         setConditionId(quickMergeConfig.conditionId)
       }
     }
-  }, [mode, currencyPositions, quickMergeConfig])
+  }, [mode, currencyPositions, companyPositions, quickMergeConfig])
 
-  // Calculate max mergeable amount (minimum of YES/NO total balances)
-  const maxBalance = useMemo(() => {
+  // Calculate max mergeable amount for currency positions
+  const maxCurrencyBalance = useMemo(() => {
     if (!currencyPositions.yes || !currencyPositions.no) return ZERO_BN
     
     const yesTotalBalance = currencyPositions.yes.userBalanceERC1155.add(currencyPositions.yes.userBalanceERC20)
@@ -151,17 +170,155 @@ export const Contents = () => {
     return yesTotalBalance.gt(noTotalBalance) ? noTotalBalance : yesTotalBalance
   }, [currencyPositions])
 
-  const needsWrapping = useMemo(() => {
-    if (!amount || !currencyPositions.yes || !currencyPositions.no) return false
+  // Calculate max mergeable amount for company positions
+  const maxCompanyBalance = useMemo(() => {
+    if (!companyPositions.yes || !companyPositions.no) return ZERO_BN
+    
+    const yesTotalBalance = companyPositions.yes.userBalanceERC1155.add(companyPositions.yes.userBalanceERC20)
+    const noTotalBalance = companyPositions.no.userBalanceERC1155.add(companyPositions.no.userBalanceERC20)
+    
+    return yesTotalBalance.gt(noTotalBalance) ? noTotalBalance : yesTotalBalance
+  }, [companyPositions])
 
-    const yesNeedsWrapping = currencyPositions.yes.userBalanceERC1155.lt(amount) && 
-      currencyPositions.yes.userBalanceERC1155.add(currencyPositions.yes.userBalanceERC20).gte(amount)
+  // Get the appropriate max balance based on context
+  const maxBalance = useMemo(() => {
+    if (mode === 'advanced') {
+      if (selectedPositions.length < 2) return ZERO_BN
+      const [pos1, pos2] = selectedPositions
+      if (!pos1 || !pos2) return ZERO_BN
+      
+      const balance1 = pos1.userBalanceERC1155.add(pos1.userBalanceERC20)
+      const balance2 = pos2.userBalanceERC1155.add(pos2.userBalanceERC20)
+      
+      return balance1.gt(balance2) ? balance2 : balance1
+    }
 
-    const noNeedsWrapping = currencyPositions.no.userBalanceERC1155.lt(amount) && 
-      currencyPositions.no.userBalanceERC1155.add(currencyPositions.no.userBalanceERC20).gte(amount)
+    // For quick mode, determine which section we're in
+    const positions = selectedPositions.length > 0 ? selectedPositions : currencyPositions
+    const isCompanySection = positions === companyPositions
+
+    return isCompanySection ? maxCompanyBalance : maxCurrencyBalance
+  }, [mode, selectedPositions, currencyPositions, companyPositions, maxCurrencyBalance, maxCompanyBalance])
+
+  const onCurrencyAmountChange = useCallback((value: BigNumber) => {
+    if (value.gt(maxCurrencyBalance)) {
+      setCurrencyAmount(maxCurrencyBalance)
+    } else {
+      setCurrencyAmount(value)
+    }
+  }, [maxCurrencyBalance])
+
+  const onCompanyAmountChange = useCallback((value: BigNumber) => {
+    if (value.gt(maxCompanyBalance)) {
+      setCompanyAmount(maxCompanyBalance)
+    } else {
+      setCompanyAmount(value)
+    }
+  }, [maxCompanyBalance])
+
+  const onAdvancedAmountChange = useCallback((value: BigNumber) => {
+    if (value.gt(maxBalance)) {
+      setAdvancedAmount(maxBalance)
+    } else {
+      setAdvancedAmount(value)
+    }
+  }, [maxBalance])
+
+  const onCurrencyUseBalance = useCallback(() => {
+    if (maxCurrencyBalance.gt(ZERO_BN)) {
+      setCurrencyAmount(maxCurrencyBalance)
+    }
+  }, [maxCurrencyBalance])
+
+  const onCompanyUseBalance = useCallback(() => {
+    if (maxCompanyBalance.gt(ZERO_BN)) {
+      setCompanyAmount(maxCompanyBalance)
+    }
+  }, [maxCompanyBalance])
+
+  const onAdvancedUseBalance = useCallback(() => {
+    if (maxBalance.gt(ZERO_BN)) {
+      setAdvancedAmount(maxBalance)
+    }
+  }, [maxBalance])
+
+  // Check if wrapping is needed for currency positions
+  const needsCurrencyWrapping = useMemo(() => {
+    if (!currencyAmount) return false
+
+    if (!currencyPositions.yes || !currencyPositions.no) return false
+
+    const yesNeedsWrapping = currencyPositions.yes.userBalanceERC1155.lt(currencyAmount) && 
+      currencyPositions.yes.userBalanceERC1155.add(currencyPositions.yes.userBalanceERC20).gte(currencyAmount)
+
+    const noNeedsWrapping = currencyPositions.no.userBalanceERC1155.lt(currencyAmount) && 
+      currencyPositions.no.userBalanceERC1155.add(currencyPositions.no.userBalanceERC20).gte(currencyAmount)
 
     return yesNeedsWrapping || noNeedsWrapping
-  }, [amount, currencyPositions])
+  }, [currencyAmount, currencyPositions])
+
+  // Check if wrapping is needed for company positions
+  const needsCompanyWrapping = useMemo(() => {
+    if (!companyAmount) return false
+
+    if (!companyPositions.yes || !companyPositions.no) return false
+
+    const yesNeedsWrapping = companyPositions.yes.userBalanceERC1155.lt(companyAmount) && 
+      companyPositions.yes.userBalanceERC1155.add(companyPositions.yes.userBalanceERC20).gte(companyAmount)
+
+    const noNeedsWrapping = companyPositions.no.userBalanceERC1155.lt(companyAmount) && 
+      companyPositions.no.userBalanceERC1155.add(companyPositions.no.userBalanceERC20).gte(companyAmount)
+
+    return yesNeedsWrapping || noNeedsWrapping
+  }, [companyAmount, companyPositions])
+
+  // Get unwrap steps for currency positions
+  const getCurrencyUnwrapSteps = useCallback(() => {
+    if (!currencyAmount || !currencyPositions.yes || !currencyPositions.no) return []
+
+    const steps = []
+    if (currencyPositions.yes.userBalanceERC1155.lt(currencyAmount) && 
+        currencyPositions.yes.userBalanceERC1155.add(currencyPositions.yes.userBalanceERC20).gte(currencyAmount)) {
+      steps.push({
+        type: 'YES',
+        amount: currencyAmount.sub(currencyPositions.yes.userBalanceERC1155),
+        symbol: 'WXDAI_Y'
+      })
+    }
+    if (currencyPositions.no.userBalanceERC1155.lt(currencyAmount) && 
+        currencyPositions.no.userBalanceERC1155.add(currencyPositions.no.userBalanceERC20).gte(currencyAmount)) {
+      steps.push({
+        type: 'NO',
+        amount: currencyAmount.sub(currencyPositions.no.userBalanceERC1155),
+        symbol: 'WXDAI_N'
+      })
+    }
+    return steps
+  }, [currencyAmount, currencyPositions])
+
+  // Get unwrap steps for company positions
+  const getCompanyUnwrapSteps = useCallback(() => {
+    if (!companyAmount || !companyPositions.yes || !companyPositions.no) return []
+
+    const steps = []
+    if (companyPositions.yes.userBalanceERC1155.lt(companyAmount) && 
+        companyPositions.yes.userBalanceERC1155.add(companyPositions.yes.userBalanceERC20).gte(companyAmount)) {
+      steps.push({
+        type: 'YES',
+        amount: companyAmount.sub(companyPositions.yes.userBalanceERC1155),
+        symbol: 'FUTA_Y'
+      })
+    }
+    if (companyPositions.no.userBalanceERC1155.lt(companyAmount) && 
+        companyPositions.no.userBalanceERC1155.add(companyPositions.no.userBalanceERC20).gte(companyAmount)) {
+      steps.push({
+        type: 'NO',
+        amount: companyAmount.sub(companyPositions.no.userBalanceERC1155),
+        symbol: 'FUTA_N'
+      })
+    }
+    return steps
+  }, [companyAmount, companyPositions])
 
   // Find mergeable positions for this condition
   const mergeablePositions = useMemo(() => {
@@ -188,63 +345,146 @@ export const Contents = () => {
     getCollateral()
   }, [networkConfig, provider, quickMergeConfig])
 
-  const onAmountChange = useCallback((value: BigNumber) => {
-    if (value.gt(maxBalance)) {
-      setAmount(maxBalance)
-    } else {
-    setAmount(value)
-    }
-  }, [maxBalance])
+  // For advanced mode
+  const advancedNeedsWrapping = useMemo(() => {
+    if (!advancedAmount || mode !== 'advanced') return false
+    if (selectedPositions.length < 2) return false
+    const [pos1, pos2] = selectedPositions
+    if (!pos1 || !pos2) return false
 
-  const onMerge = useCallback(async () => {
+    const pos1NeedsWrapping = pos1.userBalanceERC1155.lt(advancedAmount) && 
+      pos1.userBalanceERC1155.add(pos1.userBalanceERC20).gte(advancedAmount)
+
+    const pos2NeedsWrapping = pos2.userBalanceERC1155.lt(advancedAmount) && 
+      pos2.userBalanceERC1155.add(pos2.userBalanceERC20).gte(advancedAmount)
+
+    return pos1NeedsWrapping || pos2NeedsWrapping
+  }, [advancedAmount, mode, selectedPositions])
+
+  // Helper function to check if positions is an array
+  const isPositionsArray = (positions: PositionWithUserBalanceWithDecimals[] | { 
+    yes: PositionWithUserBalanceWithDecimals | null; 
+    no: PositionWithUserBalanceWithDecimals | null; 
+  }): positions is PositionWithUserBalanceWithDecimals[] => {
+    return Array.isArray(positions)
+  }
+
+  // Helper function to check if positions is a yes/no object
+  const isPositionsObject = (positions: PositionWithUserBalanceWithDecimals[] | { 
+    yes: PositionWithUserBalanceWithDecimals | null; 
+    no: PositionWithUserBalanceWithDecimals | null; 
+  }): positions is { 
+    yes: PositionWithUserBalanceWithDecimals | null; 
+    no: PositionWithUserBalanceWithDecimals | null; 
+  } => {
+    return !Array.isArray(positions) && 'yes' in positions && 'no' in positions
+  }
+
+  const onMerge = useCallback(async (positionType: 'currency' | 'company' | 'advanced' = 'currency') => {
+    const mergeAmount = positionType === 'currency' ? currencyAmount : 
+                       positionType === 'company' ? companyAmount : 
+                       advancedAmount
     try {
       if (
         status === Web3ContextStatus.Connected &&
         CPKService &&
         walletAddress &&
         condition &&
-        quickMergeConfig &&
-        selectedPositions.length > 0
+        quickMergeConfig
       ) {
         setTransactionStatus(Remote.loading())
 
+        // Get the correct positions and wrapping state based on position type
+        const positions = positionType === 'currency' ? currencyPositions : 
+                         positionType === 'company' ? companyPositions : 
+                         selectedPositions
+        const needsWrapping = positionType === 'currency' ? needsCurrencyWrapping : 
+                            positionType === 'company' ? needsCompanyWrapping : 
+                            advancedNeedsWrapping
+
+        // Type check for positions object vs array
+        if (positionType === 'advanced') {
+          if (selectedPositions.length < 2) {
+            throw new Error('Not enough positions selected for advanced merge')
+          }
+          const [pos1, pos2] = selectedPositions
+          if (!pos1 || !pos2) {
+            throw new Error('Invalid positions for advanced merge')
+          }
+        } else if (!isPositionsObject(positions) || !positions.yes || !positions.no) {
+          throw new Error(`No ${positionType} positions found`)
+        }
+
         // Check if we need to wrap tokens first
         if (needsWrapping) {
-          logger.info('Wrapping tokens before merge')
+          logger.info(`Wrapping ${positionType} tokens before merge`)
           
-          // Handle YES position wrapping if needed
-          if (currencyPositions.yes && currencyPositions.yes.userBalanceERC1155.lt(amount)) {
-            const amountToWrap = amount.sub(currencyPositions.yes.userBalanceERC1155)
-            if (amountToWrap.gt(ZERO_BN) && currencyPositions.yes.wrappedTokenAddress) {
-              logger.info('Wrapping YES position tokens:', amountToWrap.toString())
-              await CTService.safeTransferFrom(
-                walletAddress,
-                currencyPositions.yes.wrappedTokenAddress,
-                currencyPositions.yes.id,
-                amountToWrap,
-                ethers.utils.defaultAbiCoder.encode(
-                  ['string', 'bytes32'],
-                  ['Wrapped ERC-1155', ethers.utils.id('FUTA_Y')]
+          if (isPositionsObject(positions)) {
+            const { yes, no } = positions
+            // Handle YES position wrapping if needed
+            if (yes && yes.userBalanceERC1155.lt(mergeAmount)) {
+              const amountToWrap = mergeAmount.sub(yes.userBalanceERC1155)
+              if (amountToWrap.gt(ZERO_BN) && yes.wrappedTokenAddress) {
+                logger.info(`Wrapping YES ${positionType} position tokens:`, amountToWrap.toString())
+                await CTService.safeTransferFrom(
+                  walletAddress,
+                  yes.wrappedTokenAddress,
+                  yes.id,
+                  amountToWrap,
+                  ethers.utils.defaultAbiCoder.encode(
+                    ['string', 'bytes32'],
+                    ['Wrapped ERC-1155', ethers.utils.id(positionType === 'currency' ? 'WXDAI_Y' : 'FUTA_Y')]
+                  )
                 )
-              )
+              }
             }
-          }
 
-          // Handle NO position wrapping if needed
-          if (currencyPositions.no && currencyPositions.no.userBalanceERC1155.lt(amount)) {
-            const amountToWrap = amount.sub(currencyPositions.no.userBalanceERC1155)
-            if (amountToWrap.gt(ZERO_BN) && currencyPositions.no.wrappedTokenAddress) {
-              logger.info('Wrapping NO position tokens:', amountToWrap.toString())
-              await CTService.safeTransferFrom(
-                walletAddress,
-                currencyPositions.no.wrappedTokenAddress,
-                currencyPositions.no.id,
-                amountToWrap,
-                ethers.utils.defaultAbiCoder.encode(
-                  ['string', 'bytes32'],
-                  ['Wrapped ERC-1155', ethers.utils.id('FUTA_N')]
+            // Handle NO position wrapping if needed
+            if (no && no.userBalanceERC1155.lt(mergeAmount)) {
+              const amountToWrap = mergeAmount.sub(no.userBalanceERC1155)
+              if (amountToWrap.gt(ZERO_BN) && no.wrappedTokenAddress) {
+                logger.info(`Wrapping NO ${positionType} position tokens:`, amountToWrap.toString())
+                await CTService.safeTransferFrom(
+                  walletAddress,
+                  no.wrappedTokenAddress,
+                  no.id,
+                  amountToWrap,
+                  ethers.utils.defaultAbiCoder.encode(
+                    ['string', 'bytes32'],
+                    ['Wrapped ERC-1155', ethers.utils.id(positionType === 'currency' ? 'WXDAI_N' : 'FUTA_N')]
+                  )
                 )
-              )
+              }
+            }
+          } else {
+            // Handle advanced mode wrapping
+            const [pos1, pos2] = positions
+            if (pos1 && pos1.userBalanceERC1155.lt(mergeAmount)) {
+              const amountToWrap = mergeAmount.sub(pos1.userBalanceERC1155)
+              if (amountToWrap.gt(ZERO_BN) && pos1.wrappedTokenAddress) {
+                logger.info('Wrapping Position 1 tokens:', amountToWrap.toString())
+                await CTService.safeTransferFrom(
+                  walletAddress,
+                  pos1.wrappedTokenAddress,
+                  pos1.id,
+                  amountToWrap,
+                  ethers.utils.defaultAbiCoder.encode(['string', 'bytes32'], ['Wrapped ERC-1155', ethers.utils.id('ERC20')])
+                )
+              }
+            }
+
+            if (pos2 && pos2.userBalanceERC1155.lt(mergeAmount)) {
+              const amountToWrap = mergeAmount.sub(pos2.userBalanceERC1155)
+              if (amountToWrap.gt(ZERO_BN) && pos2.wrappedTokenAddress) {
+                logger.info('Wrapping Position 2 tokens:', amountToWrap.toString())
+                await CTService.safeTransferFrom(
+                  walletAddress,
+                  pos2.wrappedTokenAddress,
+                  pos2.id,
+                  amountToWrap,
+                  ethers.utils.defaultAbiCoder.encode(['string', 'bytes32'], ['Wrapped ERC-1155', ethers.utils.id('ERC20')])
+                )
+              }
             }
           }
 
@@ -252,7 +492,18 @@ export const Contents = () => {
           await refetchPositions()
         }
 
-        const { collateralToken: posCollateralToken, conditionIds, indexSets } = selectedPositions[0]
+        // Get the positions to merge and ensure they are not null
+        const positionsToMerge = isPositionsObject(positions) ? 
+          (positions.yes && positions.no ? [positions.yes, positions.no] : []) : 
+          positions.filter((pos): pos is PositionWithUserBalanceWithDecimals => pos !== null)
+
+        if (positionsToMerge.length < 2) {
+          throw new Error('Not enough valid positions to merge')
+        }
+
+        const { collateralToken: posCollateralToken, conditionIds, indexSets } = positionsToMerge[0]
+        
+        // Continue with merge logic...
         const newCollectionsSet = conditionIds.reduce<Array<{ conditionId: string; indexSet: BigNumber }>>(
           (acc, id, i) =>
             id !== quickMergeConfig.conditionId
@@ -264,12 +515,12 @@ export const Contents = () => {
           ? ConditionalTokensService.getCombinedCollectionId(newCollectionsSet)
           : NULL_PARENT_ID
 
-        const partition = selectedPositions.map(
+        const partition = positionsToMerge.map(
           ({ conditionIds, indexSets }) =>
             indexSets[conditionIds.findIndex((id) => quickMergeConfig.conditionId === id)]
         )
         const shouldTransferAmount = isConditionFullIndexSet(
-          selectedPositions,
+          positionsToMerge,
           quickMergeConfig.conditionId,
           condition.outcomeSlotCount
         )
@@ -279,7 +530,7 @@ export const Contents = () => {
         if (isUsingTheCPKAddress()) {
           await CPKService.mergePositions({
             CTService,
-            amount,
+            amount: mergeAmount,
             collateralToken: posCollateralToken,
             conditionId: quickMergeConfig.conditionId,
             parentCollectionId,
@@ -293,21 +544,21 @@ export const Contents = () => {
             parentCollectionId,
             quickMergeConfig.conditionId,
             partition,
-            amount
+            mergeAmount
           )
         }
 
-            setMergeResult(
+        setMergeResult(
           parentCollectionId === NULL_PARENT_ID
             ? posCollateralToken
             : ConditionalTokensService.getPositionId(posCollateralToken, parentCollectionId)
         )
-        setTransactionStatus(Remote.success(amount))
+        setTransactionStatus(Remote.success(mergeAmount))
       }
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err))
       setTransactionStatus(Remote.failure(error))
-      logger.error('Merge error:', error)
+      logger.error(`${positionType} Merge error:`, error)
     }
   }, [
     status,
@@ -315,13 +566,19 @@ export const Contents = () => {
     walletAddress,
     condition,
     quickMergeConfig,
-    selectedPositions,
-    amount,
+    currencyAmount,
+    companyAmount,
+    advancedAmount,
     CTService,
-    isUsingTheCPKAddress,
-    needsWrapping,
     currencyPositions,
-    refetchPositions
+    companyPositions,
+    selectedPositions,
+    needsCurrencyWrapping,
+    needsCompanyWrapping,
+    advancedNeedsWrapping,
+    refetchPositions,
+    isUsingTheCPKAddress,
+    logger
   ])
 
   const decimals = useMemo(() => (collateralToken ? collateralToken.decimals : 0), [collateralToken])
@@ -331,52 +588,121 @@ export const Contents = () => {
     [condition, transactionStatus]
   )
 
-  const disabled = useMemo(
-    () =>
-      isLoading ||
-      status !== Web3ContextStatus.Connected ||
-      (mode === 'quick' ? !currencyPositions.yes || !currencyPositions.no : mergeablePositions.length === 0) ||
-      amount.isZero() ||
-      amount.gt(maxBalance),
-    [isLoading, status, mode, currencyPositions, mergeablePositions, amount, maxBalance]
-  )
+  const disabledCurrency = useMemo(() => {
+    if (isLoading || status !== Web3ContextStatus.Connected) return true
+    if (!currencyPositions.yes || !currencyPositions.no) return true
+    if (currencyAmount.isZero()) return true
+    if (currencyAmount.gt(maxCurrencyBalance)) return true
+    return false
+  }, [isLoading, status, currencyPositions, currencyAmount, maxCurrencyBalance])
 
-  const error = useMemo(() => {
-    if (mode === 'quick') {
-      if (!currencyPositions.yes || !currencyPositions.no) {
-        return 'No mergeable positions found for this condition'
-      }
-      if (currencyPositions.yes.userBalanceERC1155.add(currencyPositions.yes.userBalanceERC20).isZero() || 
-          currencyPositions.no.userBalanceERC1155.add(currencyPositions.no.userBalanceERC20).isZero()) {
-        return 'Insufficient total balance (ERC1155 + ERC20) to merge positions'
-      }
-      if (amount.gt(maxBalance)) {
-        return `Amount exceeds maximum available balance of ${ethers.utils.formatUnits(maxBalance, decimals)}`
-      }
-    } else if (mergeablePositions.length === 0) {
+  const disabledCompany = useMemo(() => {
+    if (isLoading || status !== Web3ContextStatus.Connected) return true
+    if (!companyPositions.yes || !companyPositions.no) return true
+    if (companyAmount.isZero()) return true
+    if (companyAmount.gt(maxCompanyBalance)) return true
+    return false
+  }, [isLoading, status, companyPositions, companyAmount, maxCompanyBalance])
+
+  // Get the current positions based on mode and section
+  const getCurrentPositions = useCallback(() => {
+    if (mode === 'advanced') {
+      return selectedPositions
+    }
+
+    const positions = selectedPositions.length > 0 ? selectedPositions : currencyPositions
+    const isCompanySection = positions === companyPositions
+
+    return isCompanySection ? companyPositions : currencyPositions
+  }, [mode, selectedPositions, currencyPositions, companyPositions])
+
+  // Get whether we're in company section
+  const isCompanySection = useMemo(() => {
+    const positions = getCurrentPositions()
+    return positions === companyPositions
+  }, [getCurrentPositions, companyPositions])
+
+  // Advanced mode unwrap steps
+  const getAdvancedUnwrapSteps = useCallback(() => {
+    if (!advancedAmount || mode !== 'advanced') return []
+    if (selectedPositions.length < 2) return []
+    const [pos1, pos2] = selectedPositions
+    if (!pos1 || !pos2) return []
+
+    const steps = []
+    if (pos1.userBalanceERC1155.lt(advancedAmount) && 
+        pos1.userBalanceERC1155.add(pos1.userBalanceERC20).gte(advancedAmount)) {
+      steps.push({
+        type: 'Position 1',
+        amount: advancedAmount.sub(pos1.userBalanceERC1155),
+        symbol: 'ERC20'
+      })
+    }
+    if (pos2.userBalanceERC1155.lt(advancedAmount) && 
+        pos2.userBalanceERC1155.add(pos2.userBalanceERC20).gte(advancedAmount)) {
+      steps.push({
+        type: 'Position 2',
+        amount: advancedAmount.sub(pos2.userBalanceERC1155),
+        symbol: 'ERC20'
+      })
+    }
+    return steps
+  }, [advancedAmount, mode, selectedPositions])
+
+  const disabledAdvanced = useMemo(() => {
+    if (isLoading || status !== Web3ContextStatus.Connected) return true
+    if (mergeablePositions.length === 0) return true
+    if (advancedAmount.isZero()) return true
+    if (advancedAmount.gt(maxBalance)) return true
+    if (advancedNeedsWrapping) return true
+    return false
+  }, [isLoading, status, mergeablePositions, advancedAmount, maxBalance, advancedNeedsWrapping])
+
+  const currencyError = useMemo(() => {
+    if (!isPositionsObject(currencyPositions) || !currencyPositions.yes || !currencyPositions.no) {
+      return 'No mergeable currency positions found for this condition'
+    }
+
+    if (currencyPositions.yes.userBalanceERC1155.add(currencyPositions.yes.userBalanceERC20).isZero() || 
+        currencyPositions.no.userBalanceERC1155.add(currencyPositions.no.userBalanceERC20).isZero()) {
+      return 'Insufficient total balance (ERC1155 + ERC20) to merge currency positions'
+    }
+
+    if (currencyAmount.gt(maxCurrencyBalance)) {
+      return `Amount exceeds maximum available balance of ${ethers.utils.formatUnits(maxCurrencyBalance, decimals)}`
+    }
+
+    return null
+  }, [currencyPositions, currencyAmount, maxCurrencyBalance, decimals])
+
+  const companyError = useMemo(() => {
+    if (!isPositionsObject(companyPositions) || !companyPositions.yes || !companyPositions.no) {
+      return 'No mergeable company positions found for this condition'
+    }
+
+    if (companyPositions.yes.userBalanceERC1155.add(companyPositions.yes.userBalanceERC20).isZero() || 
+        companyPositions.no.userBalanceERC1155.add(companyPositions.no.userBalanceERC20).isZero()) {
+      return 'Insufficient total balance (ERC1155 + ERC20) to merge company positions'
+    }
+
+    if (companyAmount.gt(maxCompanyBalance)) {
+      return `Amount exceeds maximum available balance of ${ethers.utils.formatUnits(maxCompanyBalance, decimals)}`
+    }
+
+    return null
+  }, [companyPositions, companyAmount, maxCompanyBalance, decimals])
+
+  const advancedError = useMemo(() => {
+    if (mergeablePositions.length === 0) {
       return 'No mergeable positions found for this condition'
     }
-    return null
-  }, [mode, currencyPositions, mergeablePositions, amount, maxBalance, decimals])
 
-  const onUsePositionBalance = useCallback(() => {
-    if (maxBalance.gt(ZERO_BN)) {
-      setAmount(maxBalance)
-      if (currencyPositions.yes && currencyPositions.no) {
-        const yesNeedsUnwrap = currencyPositions.yes.userBalanceERC1155.lt(maxBalance)
-        const noNeedsUnwrap = currencyPositions.no.userBalanceERC1155.lt(maxBalance)
-        if (yesNeedsUnwrap || noNeedsUnwrap) {
-          logger.info('Using max balance will require unwrapping:', {
-            maxBalance: maxBalance.toString(),
-            yesERC1155: currencyPositions.yes.userBalanceERC1155.toString(),
-            yesERC20: currencyPositions.yes.userBalanceERC20.toString(),
-            noERC1155: currencyPositions.no.userBalanceERC1155.toString(),
-            noERC20: currencyPositions.no.userBalanceERC20.toString()
-          })
-        }
-      }
+    if (advancedAmount.gt(maxBalance)) {
+      return `Amount exceeds maximum available balance of ${ethers.utils.formatUnits(maxBalance, decimals)}`
     }
-  }, [maxBalance, currencyPositions, logger])
+
+    return null
+  }, [mergeablePositions, advancedAmount, maxBalance, decimals])
 
   const onWrapYes = useCallback(async (transferValue: TransferOptions) => {
     try {
@@ -589,13 +915,13 @@ export const Contents = () => {
   }, [networkConfig, provider, currencyPositions.yes?.wrappedTokenAddress, currencyPositions.no?.wrappedTokenAddress])
 
   const getUnwrapSteps = useCallback(() => {
-    if (!amount || !currencyPositions.yes || !currencyPositions.no || !quickMergeConfig) return null
+    if (!currencyAmount || !currencyPositions.yes || !currencyPositions.no || !quickMergeConfig) return null
 
     const steps = []
     
     // Check YES position
-    if (currencyPositions.yes.userBalanceERC1155.lt(amount)) {
-      const amountToUnwrap = amount.sub(currencyPositions.yes.userBalanceERC1155)
+    if (currencyPositions.yes.userBalanceERC1155.lt(currencyAmount)) {
+      const amountToUnwrap = currencyAmount.sub(currencyPositions.yes.userBalanceERC1155)
       if (amountToUnwrap.gt(ZERO_BN)) {
         steps.push({
           type: 'YES',
@@ -606,8 +932,8 @@ export const Contents = () => {
     }
 
     // Check NO position
-    if (currencyPositions.no.userBalanceERC1155.lt(amount)) {
-      const amountToUnwrap = amount.sub(currencyPositions.no.userBalanceERC1155)
+    if (currencyPositions.no.userBalanceERC1155.lt(currencyAmount)) {
+      const amountToUnwrap = currencyAmount.sub(currencyPositions.no.userBalanceERC1155)
       if (amountToUnwrap.gt(ZERO_BN)) {
         steps.push({
           type: 'NO',
@@ -618,7 +944,7 @@ export const Contents = () => {
     }
 
     return steps.length > 0 ? steps : null
-  }, [amount, currencyPositions, quickMergeConfig])
+  }, [currencyAmount, currencyPositions, quickMergeConfig])
 
   const onUnwrap = useCallback(async () => {
     try {
@@ -769,6 +1095,28 @@ export const Contents = () => {
     }
   }, [getUnwrapSteps, walletAddress, CTService, WrapperService, currencyPositions, isUsingTheCPKAddress, CPKService, logger, refetchPositions]);
 
+  const renderMergeResultModal = useCallback(() => {
+    if (!mergeResult || !collateralToken) return null
+
+    let amount: BigNumber
+    if (mode === 'advanced') {
+      amount = advancedAmount
+    } else {
+      // Quick mode
+      amount = isCompanySection ? companyAmount : currencyAmount
+    }
+
+    return (
+      <MergeResultModal
+        amount={amount}
+        closeAction={() => setMergeResult('')}
+        collateralToken={collateralToken}
+        isOpen={!!mergeResult}
+        mergeResult={mergeResult}
+      />
+    )
+  }, [mergeResult, collateralToken, mode, advancedAmount, isCompanySection, companyAmount, currencyAmount])
+
   return (
     <>
       <ModeSwitcher>
@@ -874,191 +1222,192 @@ export const Contents = () => {
                       Max amount includes both unwrapped (ERC1155) and wrapped (ERC20) tokens. If needed, tokens will be automatically unwrapped before merging.
                     </div>
                     <Amount
-                      amount={amount}
-                      balance={maxBalance}
+                      amount={currencyAmount}
+                      balance={maxCurrencyBalance}
                       decimals={decimals}
                       isFromAPosition
-                      max={maxBalance.toString()}
-                      onAmountChange={onAmountChange}
-                      onUseWalletBalance={onUsePositionBalance}
+                      max={maxCurrencyBalance.toString()}
+                      onAmountChange={onCurrencyAmountChange}
+                      onUseWalletBalance={onCurrencyUseBalance}
                     />
-                    {needsWrapping && (
+                    {needsCurrencyWrapping && (
                       <WarningMessage status={StatusInfoType.warning}>
                         <div>
                           <div>This merge requires unwrapping tokens first. Required steps:</div>
-                          {getUnwrapSteps()?.map((step, index) => {
-                            const position = step.type === 'YES' ? currencyPositions.yes : currencyPositions.no;
-                            if (!position) return null;
-                            
-                            return (
-                              <div key={index}>
-                                <UnwrapStep
-                                  onClick={async () => {
-                                    try {
-                                      logger.info('Starting click unwrap flow - Initial state:', {
-                                        step: {
-                                          type: step.type,
-                                          amount: step.amount.toString(),
-                                          symbol: step.symbol
-                                        },
-                                        position: {
-                                          id: position.id,
-                                          wrappedTokenAddress: position.wrappedTokenAddress,
-                                          userBalanceERC1155: position.userBalanceERC1155.toString(),
-                                          userBalanceERC20: position.userBalanceERC20.toString()
-                                        },
-                                        services: {
-                                          hasCTService: !!CTService,
-                                          hasWrapperService: !!WrapperService,
-                                          walletAddress
-                                        }
-                                      });
-
-                                      setTransfer(Remote.loading());
-
-                                      const tokenBytes = getTokenBytecode(
-                                        'Wrapped ERC-1155',
-                                        step.type === 'YES' ? 'FUTA_Y' : 'FUTA_N',
-                                        decimals,
-                                        position.wrappedTokenAddress
-                                      );
-
-                                      logger.info('Click unwrap - Created tokenBytes:', {
-                                        tokenBytes,
-                                        params: {
-                                          tokenName: 'Wrapped ERC-1155',
-                                          tokenSymbol: step.type === 'YES' ? 'FUTA_Y' : 'FUTA_N',
-                                          decimals,
-                                          wrappedTokenAddress: position.wrappedTokenAddress
-                                        }
-                                      });
-
-                                      const transferValue: TransferOptions = {
-                                        amount: step.amount,
-                                        positionId: position.id,
-                                        tokenBytes,
-                                        address: CTService?.address || ''
-                                      };
-
-                                      logger.info('Click unwrap - Created transferValue:', {
-                                        transferValue: {
-                                          amount: transferValue.amount.toString(),
-                                          positionId: transferValue.positionId,
-                                          tokenBytes: transferValue.tokenBytes,
-                                          address: transferValue.address
-                                        }
-                                      });
-
-                                      if (step.type === 'YES' && currencyPositions.yes) {
-                                        setTransactionTitle('Unwrapping YES Position ERC20');
-                                        await onUnwrapYes(transferValue);
-                                      } else if (step.type === 'NO' && currencyPositions.no) {
-                                        setTransactionTitle('Unwrapping NO Position ERC20');
-                                        await onUnwrapNo(transferValue);
-                                      }
-
-                                      // After successful unwrap
-                                      await refetchPositions();
-                                      setUnwrapStatus({ 
-                                        success: true, 
-                                        message: `Successfully unwrapped ${ethers.utils.formatUnits(step.amount, decimals)} ${step.symbol} from ${step.type} position` 
-                                      });
-                                      
-                                      // Clear loading state
-                                      setTransfer(Remote.success(transferValue));
-
-                                      // Clear success message after 3 seconds
-                                      setTimeout(() => {
-                                        setUnwrapStatus({ success: false, message: '' });
-                                        setTransfer(Remote.notAsked()); // Also clear the transfer state
-                                      }, 3000);
-
-                                    } catch (err) {
-                                      setUnwrapStatus({ 
-                                        success: false, 
-                                        message: `Failed to unwrap: ${err instanceof Error ? err.message : String(err)}` 
-                                      });
-                                      setTransfer(Remote.failure(err instanceof Error ? err : new Error(String(err))));
-                                    }
-                                  }}
-                                >
-                                  {index + 1}. Click to unwrap {ethers.utils.formatUnits(step.amount, decimals)} {step.symbol} from {step.type} position
-                                </UnwrapStep>
-                                {transfer.isLoading() && step.type === (transactionTitle.includes('YES') ? 'YES' : 'NO') && (
-                                  <StyledStatusInfo status={StatusInfoType.working}>
-                                    Unwrapping {step.type} position...
-                                  </StyledStatusInfo>
-                                )}
-                                {transfer.isSuccess() && unwrapStatus.success && step.type === (transactionTitle.includes('YES') ? 'YES' : 'NO') && (
-                                  <StyledStatusInfo status={StatusInfoType.success}>
-                                    {unwrapStatus.message}
-                                  </StyledStatusInfo>
-                                )}
-                                {transfer.isFailure() && !unwrapStatus.success && step.type === (transactionTitle.includes('YES') ? 'YES' : 'NO') && (
-                                  <StyledStatusInfo status={StatusInfoType.error}>
-                                    {unwrapStatus.message}
-                                  </StyledStatusInfo>
-                                )}
-                              </div>
-                            );
-                          })}
-                          <div style={{ marginTop: '8px' }}>
-                            After unwrapping, you can merge the positions.
-                          </div>
-                        </div>
-                      </WarningMessage>
-                    )}
-                  </div>
-                </Row>
-                {error && (
-                  <StatusInfoInline status={StatusInfoType.warning}>
-                    {error}
-                  </StatusInfoInline>
-                )}
-                <ButtonContainer>
-                  {needsWrapping ? (
-                    <>
-                      <WarningMessage status={StatusInfoType.warning}>
-                        <div>
-                          <div>Please unwrap tokens before merging:</div>
-                          {getUnwrapSteps()?.map((step, index) => (
+                          {getCurrencyUnwrapSteps()?.map((step, index) => (
                             <div key={index} style={{ marginLeft: '20px', marginTop: '4px' }}>
                               {index + 1}. Use the <strong>Unwrap</strong> button above in the {step.type} position section to unwrap {ethers.utils.formatUnits(step.amount, decimals)} {step.symbol}
                             </div>
                           ))}
                         </div>
                       </WarningMessage>
-                      <Button 
-                        disabled={true}
-                        buttonType={ButtonType.primary}
-                      >
-                        Merge Currency Positions (Unwrap Required)
-                      </Button>
-                    </>
+                    )}
+                  </div>
+                </Row>
+                {currencyError && (
+                  <StatusInfoInline status={StatusInfoType.warning}>
+                    {currencyError}
+                  </StatusInfoInline>
+                )}
+                <ButtonContainer>
+                  {needsCurrencyWrapping ? (
+                    <Button 
+                      disabled={true}
+                      buttonType={ButtonType.primary}
+                    >
+                      Merge Currency Positions (Unwrap Required)
+                    </Button>
                   ) : (
                     <Button 
-                      disabled={disabled} 
-                      onClick={onMerge}
+                      disabled={disabledCurrency} 
+                      onClick={(e) => onMerge('currency')}
                       buttonType={ButtonType.primary}
                     >
                       Merge Currency Positions
                     </Button>
                   )}
                 </ButtonContainer>
-                {/* Company token section - to be added later */}
+                {/* Company token section */}
                 <h3>Company Token Positions</h3>
-                <StatusInfoInline status={StatusInfoType.warning}>
-                  Company token positions will be available soon
-                </StatusInfoInline>
-                {mergeResult && collateralToken && (
-                  <MergeResultModal
-                    amount={amount}
-                    closeAction={() => setMergeResult('')}
-                    collateralToken={collateralToken}
-                    isOpen={!!mergeResult}
-                    mergeResult={mergeResult}
-                  />
+                {quickMergeConfig?.companyPositions ? (
+                  <>
+                    <Row>
+                      <div>
+                        <strong>YES Position:</strong> {companyPositions.yes ? (
+                          <>
+                            Balance: <span style={{ color: 'green' }}>{companyPositions.yes.userBalanceERC1155WithDecimals}</span> (ERC1155)
+                            {companyPositions.yes.userBalanceERC20.gt(ZERO_BN) && companyPositions.yes.wrappedTokenAddress && (
+                              <span>
+                                {' '}+ <span style={{ color: 'blue' }}>{companyPositions.yes.userBalanceERC20WithDecimals}</span> ({quickMergeConfig.companyPositions.yes.wrap.tokenSymbol})
+                              </span>
+                            )}
+                            <div style={{ marginTop: '4px', color: 'red' }}>
+                              Total Available: {ethers.utils.formatUnits(companyPositions.yes.userBalanceERC1155.add(companyPositions.yes.userBalanceERC20), decimals)}
+                            </div>
+                            {quickMergeConfig && (
+                              <div style={{ marginTop: '4px', fontSize: '12px' }}>
+                                <span>Wrapped Token Address: </span>
+                                <a href={`https://blockscout.com/xdai/mainnet/address/${quickMergeConfig.companyPositions.yes.wrap.wrappedCollateralTokenAddress}`} target="_blank" rel="noopener noreferrer">
+                                  <FormatHash hash={truncateStringInTheMiddle(quickMergeConfig.companyPositions.yes.wrap.wrappedCollateralTokenAddress, 8, 6)} />
+                                </a>
+                                <ButtonCopy value={quickMergeConfig.companyPositions.yes.wrap.wrappedCollateralTokenAddress} />
+                                <ExternalLink href={`https://blockscout.com/xdai/mainnet/address/${quickMergeConfig.companyPositions.yes.wrap.wrappedCollateralTokenAddress}`} />
+                              </div>
+                            )}
+                            {companyPositions.yes && (
+                              <QuickWrapUnwrap
+                                positionId={companyPositions.yes.id}
+                                balanceERC1155={companyPositions.yes.userBalanceERC1155}
+                                balanceERC20={companyPositions.yes.userBalanceERC20}
+                                decimals={decimals}
+                                symbol={collateralToken?.symbol || 'WXDAI'}
+                                wrap={quickMergeConfig.companyPositions.yes.wrap}
+                                onUnwrap={onUnwrapYes}
+                                onWrap={onWrapYes}
+                              />
+                            )}
+                          </>
+                        ) : 'No balance'}
+                      </div>
+                    </Row>
+                    <Row>
+                      <div>
+                        <strong>NO Position:</strong> {companyPositions.no ? (
+                          <>
+                            Balance: <span style={{ color: 'green' }}>{companyPositions.no.userBalanceERC1155WithDecimals}</span> (ERC1155)
+                            {companyPositions.no.userBalanceERC20.gt(ZERO_BN) && companyPositions.no.wrappedTokenAddress && (
+                              <span>
+                                {' '}+ <span style={{ color: 'blue' }}>{companyPositions.no.userBalanceERC20WithDecimals}</span> ({quickMergeConfig.companyPositions.no.wrap.tokenSymbol})
+                              </span>
+                            )}
+                            <div style={{ marginTop: '4px', color: 'red' }}>
+                              Total Available: {ethers.utils.formatUnits(companyPositions.no.userBalanceERC1155.add(companyPositions.no.userBalanceERC20), decimals)}
+                            </div>
+                            {quickMergeConfig && (
+                              <div style={{ marginTop: '4px', fontSize: '12px' }}>
+                                <span>Wrapped Token Address: </span>
+                                <a href={`https://blockscout.com/xdai/mainnet/address/${quickMergeConfig.companyPositions.no.wrap.wrappedCollateralTokenAddress}`} target="_blank" rel="noopener noreferrer">
+                                  <FormatHash hash={truncateStringInTheMiddle(quickMergeConfig.companyPositions.no.wrap.wrappedCollateralTokenAddress, 8, 6)} />
+                                </a>
+                                <ButtonCopy value={quickMergeConfig.companyPositions.no.wrap.wrappedCollateralTokenAddress} />
+                                <ExternalLink href={`https://blockscout.com/xdai/mainnet/address/${quickMergeConfig.companyPositions.no.wrap.wrappedCollateralTokenAddress}`} />
+                              </div>
+                            )}
+                            {companyPositions.no && (
+                              <QuickWrapUnwrap
+                                positionId={companyPositions.no.id}
+                                balanceERC1155={companyPositions.no.userBalanceERC1155}
+                                balanceERC20={companyPositions.no.userBalanceERC20}
+                                decimals={decimals}
+                                symbol={collateralToken?.symbol || 'WXDAI'}
+                                wrap={quickMergeConfig.companyPositions.no.wrap}
+                                onUnwrap={onUnwrapNo}
+                                onWrap={onWrapNo}
+                              />
+                            )}
+                          </>
+                        ) : 'No balance'}
+                      </div>
+                    </Row>
+                    <Row>
+                      <div>
+                        <div style={{ marginBottom: '8px', fontSize: '12px', color: 'gray' }}>
+                          Max amount includes both unwrapped (ERC1155) and wrapped (ERC20) tokens. If needed, tokens will be automatically unwrapped before merging.
+                        </div>
+                        <Amount
+                          amount={companyAmount}
+                          balance={maxCompanyBalance}
+                          decimals={decimals}
+                          isFromAPosition
+                          max={maxCompanyBalance.toString()}
+                          onAmountChange={onCompanyAmountChange}
+                          onUseWalletBalance={onCompanyUseBalance}
+                        />
+                        {needsCompanyWrapping && (
+                          <WarningMessage status={StatusInfoType.warning}>
+                            <div>
+                              <div>This merge requires unwrapping tokens first. Required steps:</div>
+                              {getCompanyUnwrapSteps()?.map((step, index) => (
+                                <div key={index} style={{ marginLeft: '20px', marginTop: '4px' }}>
+                                  {index + 1}. Use the <strong>Unwrap</strong> button above in the {step.type} position section to unwrap {ethers.utils.formatUnits(step.amount, decimals)} {step.symbol}
+                                </div>
+                              ))}
+                            </div>
+                          </WarningMessage>
+                        )}
+                      </div>
+                    </Row>
+                    {companyError && (
+                      <StatusInfoInline status={StatusInfoType.warning}>
+                        {companyError}
+                      </StatusInfoInline>
+                    )}
+                    <ButtonContainer>
+                      {needsCompanyWrapping ? (
+                        <Button 
+                          disabled={true}
+                          buttonType={ButtonType.primary}
+                        >
+                          Merge Company Positions (Unwrap Required)
+                        </Button>
+                      ) : (
+                        <Button 
+                          disabled={disabledCompany} 
+                          onClick={(e) => onMerge('company')}
+                          buttonType={ButtonType.primary}
+                        >
+                          Merge Company Positions
+                        </Button>
+                      )}
+                    </ButtonContainer>
+                  </>
+                ) : (
+                  <StatusInfoInline status={StatusInfoType.warning}>
+                    No company token positions configured for this network
+                  </StatusInfoInline>
                 )}
+                {/* Currency section merge result */}
+                {renderMergeResultModal()}
               </>
             )}
           </CenteredCard>
@@ -1070,9 +1419,9 @@ export const Contents = () => {
           </CenteredCard>
         )
       ) : (
-    <CenteredCard>
-      <SelectablePositionTable
-        onFilterCallback={onFilterCallback}
+        <CenteredCard>
+          <SelectablePositionTable
+            onFilterCallback={onFilterCallback}
             onRowClicked={async (selectedPosition: PositionWithUserBalanceWithDecimals) => {
               setPosition(selectedPosition)
               if (!positions) return
@@ -1096,12 +1445,12 @@ export const Contents = () => {
                 setConditionId(selectedPosition.conditions[0].conditionId)
               }
             }}
-        selectedPosition={position}
-      />
+            selectedPosition={position}
+          />
           {position && (
             <>
-      <Row>
-        <MergeWith
+              <Row>
+                <MergeWith
                   errorFetching={false}
                   isLoading={false}
                   mergeablePositions={advancedMergeablePositions.map(position => ({
@@ -1117,71 +1466,65 @@ export const Contents = () => {
                       )
                     }
                   }}
-        />
-      </Row>
+                />
+              </Row>
               <Row>
-        <ConditionsDropdown
+                <ConditionsDropdown
                   conditions={position.conditions.map((c) => c.conditionId)}
                   onClick={setConditionId}
-          value={conditionId}
-        />
-      </Row>
-        <Row>
+                  value={conditionId}
+                />
+              </Row>
+              <Row>
                 <div>
                   <div style={{ marginBottom: '8px', fontSize: '12px', color: 'gray' }}>
                     Max amount includes both unwrapped (ERC1155) and wrapped (ERC20) tokens. If needed, tokens will be automatically unwrapped before merging.
                   </div>
-        <Amount
-          amount={amount}
-          balance={maxBalance}
-          decimals={decimals}
+                  <Amount
+                    amount={advancedAmount}
+                    balance={maxBalance}
+                    decimals={decimals}
                     isFromAPosition
-          max={maxBalance.toString()}
-          onAmountChange={onAmountChange}
-          onUseWalletBalance={onUsePositionBalance}
-        />
-                  {needsWrapping && (
+                    max={maxBalance.toString()}
+                    onAmountChange={onAdvancedAmountChange}
+                    onUseWalletBalance={onAdvancedUseBalance}
+                  />
+                  {advancedNeedsWrapping && (
                     <WarningMessage status={StatusInfoType.warning}>
-                      {`This merge will require unwrapping some tokens first. The process will be handled automatically. Available: ${ethers.utils.formatUnits(maxBalance, decimals)} (ERC1155 + ERC20)`}
+                      <div>
+                        <div>This merge requires unwrapping tokens first. Required steps:</div>
+                        {getAdvancedUnwrapSteps()?.map((step, index) => (
+                          <div key={index} style={{ marginLeft: '20px', marginTop: '4px' }}>
+                            {index + 1}. Use the <strong>Unwrap</strong> button above in the {step.type} section to unwrap {ethers.utils.formatUnits(step.amount, decimals)} {step.symbol}
+                          </div>
+                        ))}
+                      </div>
                     </WarningMessage>
                   )}
                 </div>
-      </Row>
+              </Row>
               {selectedPositions.length > 0 && conditionId && (
                 <Row>
-        <MergePreview
-          amount={amount}
-          condition={condition}
-          positions={selectedPositions}
-          token={collateralToken}
-        />
-      </Row>
-      )}
-      <ButtonContainer>
+                  <MergePreview
+                    amount={advancedAmount}
+                    condition={condition}
+                    positions={selectedPositions}
+                    token={collateralToken}
+                  />
+                </Row>
+              )}
+              <ButtonContainer>
                 <Button
-                  disabled={
-                    !conditionId ||
-                    selectedPositions.length === 0 ||
-                    amount.isZero() ||
-                    amount.gt(maxBalance)
-                  }
-                  onClick={onMerge}
+                  disabled={disabledAdvanced}
+                  onClick={(e) => onMerge('advanced')}
                 >
-                  {needsWrapping ? 'Unwrap & Merge Positions' : 'Merge Positions'}
-        </Button>
-      </ButtonContainer>
+                  {advancedNeedsWrapping ? 'Unwrap & Merge Positions' : 'Merge Positions'}
+                </Button>
+              </ButtonContainer>
             </>
           )}
-          {mergeResult && collateralToken && (
-            <MergeResultModal
-              amount={amount}
-              closeAction={() => setMergeResult('')}
-              collateralToken={collateralToken}
-              isOpen={!!mergeResult}
-              mergeResult={mergeResult}
-            />
-          )}
-    </CenteredCard>
+          {renderMergeResultModal()}
+        </CenteredCard>
       )}
     </>
   )
