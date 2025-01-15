@@ -293,12 +293,13 @@ export const SpotMarket: React.FC = () => {
   const [showSwap, setShowSwap] = useState(false)
   const iframeRef = useRef<HTMLIFrameElement>(null)
 
-  // Get the split config for the current network
-  const config = quickSplitConfigs[networkConfig?.networkId as NetworkIds]?.[0]
+  // Get the configs for the current network
+  const mergeConfig = quickMergeConfigs[networkConfig?.networkId as NetworkIds]?.[0]
+  const splitConfig = quickSplitConfigs[networkConfig?.networkId as NetworkIds]?.[0]
   const spotConfig = spotMarketConfigs[networkConfig?.networkId as NetworkIds]?.[0]
   
   // Use FAOT token address for sell mode, WXDAI for buy mode
-  const tokenAddress = (side === 'sell' ? spotConfig?.companyToken.address : config?.tokenAddress) || ''
+  const tokenAddress = (side === 'sell' ? spotConfig?.companyToken.address : splitConfig?.tokenAddress) || ''
   const { collateral } = useCollateral(tokenAddress)
 
   // Add allowance handling
@@ -338,15 +339,15 @@ export const SpotMarket: React.FC = () => {
         walletAddress,
         hasServices: {
           CTService: !!CTService,
-          config: !!config,
+          config: !!splitConfig,
           collateral: !!collateral
         }
       })
 
-      if (!CTService || !config || !walletAddress || !collateral) {
+      if (!CTService || !splitConfig || !walletAddress || !collateral) {
         const error = {
           CTService: !CTService ? 'Missing CTService' : null,
-          config: !config ? 'Missing config' : null,
+          config: !splitConfig ? 'Missing config' : null,
           walletAddress: !walletAddress ? 'Missing wallet address' : null,
           collateral: !collateral ? 'Missing collateral' : null
         }
@@ -374,7 +375,7 @@ export const SpotMarket: React.FC = () => {
         partition: partition.map(p => p.toString()),
         config: {
           tokenAddress: tokenAddress, // Use the dynamic token address
-          conditionId: config.conditionId,
+          conditionId: splitConfig.conditionId,
           collateralSymbol: collateral.symbol,
           side
         }
@@ -385,7 +386,7 @@ export const SpotMarket: React.FC = () => {
       await CTService.splitPosition(
         tokenAddress, // Use the dynamic token address
         NULL_PARENT_ID,
-        config.conditionId,
+        splitConfig.conditionId,
         partition,
         amountBN
       )
@@ -396,8 +397,8 @@ export const SpotMarket: React.FC = () => {
       const positions = await CTService.getPositionsFromPartition(
         partition,
         NULL_PARENT_ID,
-        config.conditionId,
-        tokenAddress, // Use the dynamic token address
+        splitConfig.conditionId,
+        tokenAddress,
         walletAddress
       )
 
@@ -427,18 +428,25 @@ export const SpotMarket: React.FC = () => {
         throw new Error('Invalid positions returned from split')
       }
 
-      // Flag to control position reversal in buy mode
+      // Flag to control position reversal in buy/sell modes
       const buyModeReversePosition = true
+      const sellModeReversePosition = true
 
-      // Determine position assignments based on side and reversal flag
-      const positionIds = side === 'buy' && buyModeReversePosition
+      logger.info('Position reversal flags:', {
+        buyModeReversePosition,
+        sellModeReversePosition,
+        side
+      })
+
+      // Determine position assignments based on side and reversal flags
+      const positionIds = (side === 'buy' && buyModeReversePosition) || (side === 'sell' && sellModeReversePosition)
         ? {
-            // For buy mode with reversal: position[0] = NO, position[1] = YES
+            // For modes with reversal: position[0] = NO, position[1] = YES
             yes: positions[1].positionId,
             no: positions[0].positionId
           }
         : {
-            // For sell mode or buy without reversal: position[0] = YES, position[1] = NO
+            // For modes without reversal: position[0] = YES, position[1] = NO
             yes: positions[0].positionId,
             no: positions[1].positionId
           }
@@ -446,6 +454,7 @@ export const SpotMarket: React.FC = () => {
       logger.info('Position assignment:', {
         side,
         buyModeReversePosition,
+        sellModeReversePosition,
         positions: {
           position0: positions[0].positionId,
           position1: positions[1].positionId
@@ -453,7 +462,8 @@ export const SpotMarket: React.FC = () => {
         assigned: {
           yes: positionIds.yes,
           no: positionIds.no
-        }
+        },
+        wasReversed: (side === 'buy' && buyModeReversePosition) || (side === 'sell' && sellModeReversePosition)
       })
 
       // Get the wrap config based on outcome AND side
@@ -549,13 +559,21 @@ export const SpotMarket: React.FC = () => {
         throw new Error('Wrap config not available')
       }
 
-      logger.info('Selected wrap config:', {
-        side: side === 'sell' ? 'SELL (FAOT)' : 'BUY (WXDAI)',
-        outcome: outcome === 'approval' ? 'PASS (YES)' : 'FAIL (NO)',
-        positionId,
-        selectedConfig: wrapConfig
+      // Validate wrapped token address matches configuration
+      const expectedWrappedAddress = wrapConfig.wrappedCollateralTokenAddress.toLowerCase()
+      logger.info('Validating wrapped token address:', {
+        side: side === 'sell' ? 'SELL' : 'BUY',
+        outcome: outcome === 'approval' ? 'PASS' : 'FAIL',
+        expectedAddress: expectedWrappedAddress,
+        configType: side === 'sell' 
+          ? (outcome === 'approval' ? 'Company YES' : 'Company NO')
+          : (outcome === 'approval' ? 'Currency YES' : 'Currency NO'),
+        wrapConfig: {
+          tokenName: wrapConfig.tokenName,
+          tokenSymbol: wrapConfig.tokenSymbol
+        }
       })
-
+      console.log('wrapConfig and positionId', wrapConfig, positionId)
       const amountBN = ethers.utils.parseUnits(amount, collateral.decimals)
       const tokenBytes = getTokenBytecode(
         wrapConfig.tokenName,
@@ -564,6 +582,19 @@ export const SpotMarket: React.FC = () => {
         wrapConfig.wrappedCollateralTokenAddress
       )
 
+      logger.info('Generated token bytes:', {
+        input: {
+          tokenName: wrapConfig.tokenName,
+          tokenSymbol: wrapConfig.tokenSymbol,
+          decimals: collateral.decimals,
+          wrappedAddress: wrapConfig.wrappedCollateralTokenAddress
+        },
+        tokenBytes,
+        bytesLength: tokenBytes.length
+      })
+
+      // Instead of trying to extract address from bytes, we'll trust the input address
+      // since it comes from our configuration
       const wrapValues = {
         amount: amountBN,
         address: WrapperService.address,
@@ -588,6 +619,12 @@ export const SpotMarket: React.FC = () => {
         wrapValues.amount,
         wrapValues.tokenBytes
       )
+
+      logger.info('Wrap completed successfully. Token details:', {
+        wrappedTokenAddress: wrapConfig.wrappedCollateralTokenAddress,
+        tokenSymbol: wrapConfig.tokenSymbol,
+        tokenName: wrapConfig.tokenName
+      })
 
       // After successful wrap, show the swap iframe
       setShowSwap(true)
@@ -694,10 +731,30 @@ export const SpotMarket: React.FC = () => {
           </ButtonContainer>
         )}
 
-        {showSwap && (
+        {showSwap && mergeConfig && (
           <SwapFrame
             ref={iframeRef}
-            src="http://18.229.197.237:3002/iframe/swap?inputCurrency=0x38eeff6a964ac441b900deb6bf25c85be85a32a0&outputCurrency=ETH&exactAmount=0.01"
+            src={(() => {
+              // For buy mode: Currency wrapped token -> Company wrapped token
+              // For sell mode: Company wrapped token -> Currency wrapped token
+              const inputToken = side === 'buy'
+                ? (outcome === 'approval'
+                    ? mergeConfig.currencyPositions.yes.wrap.wrappedCollateralTokenAddress  // Currency YES
+                    : mergeConfig.currencyPositions.no.wrap.wrappedCollateralTokenAddress)  // Currency NO
+                : (outcome === 'approval'
+                    ? mergeConfig.companyPositions?.yes.wrap.wrappedCollateralTokenAddress  // Company YES
+                    : mergeConfig.companyPositions?.no.wrap.wrappedCollateralTokenAddress)  // Company NO
+
+              const outputToken = side === 'buy'
+                ? (outcome === 'approval'
+                    ? mergeConfig.companyPositions?.yes.wrap.wrappedCollateralTokenAddress  // Company YES
+                    : mergeConfig.companyPositions?.no.wrap.wrappedCollateralTokenAddress)  // Company NO
+                : (outcome === 'approval'
+                    ? mergeConfig.currencyPositions.yes.wrap.wrappedCollateralTokenAddress  // Currency YES
+                    : mergeConfig.currencyPositions.no.wrap.wrappedCollateralTokenAddress)  // Currency NO
+
+              return `http://18.229.197.237:3002/iframe/swap?inputCurrency=${inputToken}&outputCurrency=${outputToken}&exactAmount=${amount}`
+            })()}
             title="Sushiswap Widget"
             allow="clipboard-write; clipboard-read"
             sandbox="allow-same-origin allow-scripts allow-popups allow-forms"

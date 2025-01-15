@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useCallback } from 'react'
 import styled from 'styled-components'
-
+import { NetworkIds } from 'util/types'
+import { quickMergeConfigs } from 'config/mergeConfig'
 import { PageTitle } from 'components/text/PageTitle'
 import { BaseCard } from 'components/pureStyledComponents/BaseCard'
 import { InlineLoading } from 'components/statusInfo/InlineLoading'
@@ -40,6 +41,17 @@ export const SwapTokens: React.FC = () => {
   const { status } = useWeb3Context()
   const isConnected = status._type === Web3ContextStatus.Connected
   const iframeRef = useRef<HTMLIFrameElement>(null)
+
+  // Get config for current network
+  const config = status._type === Web3ContextStatus.Connected 
+    ? quickMergeConfigs[status.networkConfig.networkId as NetworkIds]?.[0]
+    : null
+
+  // Get params from URL
+  const urlParams = new URLSearchParams(window.location.search)
+  const inputCurrency = urlParams.get('inputCurrency')
+  const outputCurrency = urlParams.get('outputCurrency')
+  const exactAmount = urlParams.get('exactAmount') || '0.01'
 
   // Handle sending Web3 context to iframe
   const sendWeb3Context = useCallback((requestId?: string) => {
@@ -141,10 +153,10 @@ export const SwapTokens: React.FC = () => {
       <PageTitle>Swap Tokens</PageTitle>
       <Contents>
         {!isConnected && <InlineLoading message="Please connect to your wallet..." />}
-        {isConnected && (
+        {isConnected && inputCurrency && outputCurrency && (
           <SwapFrame
             ref={iframeRef}
-            src="http://18.229.197.237:3002/iframe/swap?inputCurrency=0x38eeff6a964ac441b900deb6bf25c85be85a32a0&outputCurrency=ETH&exactAmount=0.01"
+            src={`http://18.229.197.237:3002/iframe/swap?inputCurrency=${inputCurrency}&outputCurrency=${outputCurrency}&exactAmount=${exactAmount}`}
             title="Sushiswap Widget"
             allow="clipboard-write; clipboard-read"
             sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
